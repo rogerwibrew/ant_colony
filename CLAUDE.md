@@ -501,18 +501,19 @@ unset OMP_NUM_THREADS
 
 Benchmark on 32-core system with 30 ants, 100 iterations:
 
-| Problem | 1 Thread | 2 Threads | 4 Threads | 32 Threads | Best Speedup |
-|---------|----------|-----------|-----------|------------|--------------|
-| ulysses16 (16 cities) | 4.89ms | 4.82ms | 4.69ms | 4.60ms | 1.06× |
-| berlin52 (52 cities) | 360ms | 197ms | 111ms | 38ms | **9.4×** |
-| eil76 (76 cities) | 683ms | 360ms | 210ms | 67ms | **10.3×** |
-| kroA100 (100 cities) | 1144ms | 612ms | 337ms | 100ms | **11.4×** |
+| Problem | 1 Thread | 4 Threads | 8 Threads | 16 Threads | 32 Threads | Best Speedup |
+|---------|----------|-----------|-----------|------------|------------|--------------|
+| ulysses16 (16 cities) | 4.89ms | 4.69ms | 4.60ms | 4.60ms | 4.60ms | 1.06× |
+| berlin52 (52 cities) | 361ms | 111ms | 75ms | 53ms | **35ms** | **10.3×** |
+| eil76 (76 cities) | 687ms | 217ms | 140ms | 104ms | **61ms** | **11.3×** |
+| kroA100 (100 cities) | 1143ms | 336ms | 202ms | 165ms | **99ms** | **11.6×** |
 
 **Key Observations:**
 - **Small problems (<20 cities):** Minimal speedup due to parallelization overhead
-- **Medium problems (50-100 cities):** 3-4× speedup on 4 cores, 9-11× on 32 cores
-- **Scaling:** Near-linear scaling up to ~8-16 threads, then diminishing returns
+- **Medium problems (50-100 cities):** 3-4× speedup on 4 cores, **10-12× on 32 cores**
+- **Scaling:** Near-linear up to 8 threads (60-70% efficiency), 32-36% efficiency at 32 threads
 - **Solution quality:** Identical to serial version (verified with tests)
+- **Adaptive threading:** Automatically prevents contention when thread count >> ant count
 
 ### Implementation Details
 
@@ -529,10 +530,11 @@ Benchmark on 32-core system with 30 ants, 100 iterations:
    - `#pragma omp parallel for collapse(2)`
    - **Impact:** 20-30% of runtime → secondary speedup
 
-3. **Pheromone deposition** (`PheromoneMatrix::depositPheromone`)
-   - Atomic operations for thread-safe updates
-   - `#pragma omp atomic`
-   - Minimal contention in practice
+3. **Pheromone deposition** (`AntColony::updatePheromones`)
+   - Parallel loop over ants with atomic updates
+   - `#pragma omp atomic` in depositPheromone
+   - **Adaptive threading:** Caps threads at 2× ant count to reduce atomic contention
+   - Only parallelizes if ≥8 ants (avoids overhead for small colonies)
 
 4. **Best tour tracking** (`AntColony::runIteration`)
    - Per-thread best tracking, merge at end
