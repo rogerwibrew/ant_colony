@@ -6,7 +6,7 @@
 AntColony::AntColony(const Graph& graph, int numAnts, double alpha, double beta,
                      double rho, double Q, bool useDistinctStartCities)
     : graph_(graph),
-      pheromones_(graph.getNumCities(), 1.0),
+      pheromones_(graph.getNumCities(), 1.0),  // Will be properly initialized in initialize()
       numAnts_(numAnts),
       alpha_(alpha),
       beta_(beta),
@@ -19,8 +19,17 @@ AntColony::AntColony(const Graph& graph, int numAnts, double alpha, double beta,
 }
 
 void AntColony::initialize() {
-    // Initialize pheromone matrix with initial value
-    pheromones_.initialize(1.0);
+    // Calculate initial pheromone value using τ₀ = m / C^nn
+    // where m is the number of ants and C^nn is the nearest neighbor tour length
+    double nearestNeighborLength = graph_.nearestNeighborTourLength();
+    double initialPheromone = 1.0;  // Default fallback
+
+    if (nearestNeighborLength > 0.0) {
+        initialPheromone = static_cast<double>(numAnts_) / nearestNeighborLength;
+    }
+
+    // Initialize pheromone matrix with calculated value
+    pheromones_.initialize(initialPheromone);
 
     // Clear iteration history
     iterationBestDistances_.clear();

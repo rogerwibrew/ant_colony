@@ -98,6 +98,8 @@ Load TSP Instance → Initialize Colony → For each iteration:
 
 - Distance matrix is precomputed once in Graph constructor (O(n²)) for O(1) lookups
 - Matrix stored as `std::vector<std::vector<double>>` (runtime-sized, symmetric)
+- Initial pheromone value uses **τ₀ = m / C^nn** formula (m = number of ants, C^nn = nearest neighbor tour length)
+- Nearest neighbor heuristic provides problem-adaptive initialization
 - ACO flow: Ants build tours → Update pheromones → Track best → Repeat
 - Member variables use trailing underscore: `id_`, `cities_`
 - Single-arg constructors are `explicit`
@@ -256,6 +258,7 @@ Default values for ACO:
 - `const City& getCity(int index) const` - Get city by index
 - `const std::vector<City>& getCities() const` - Get all cities
 - `bool isValid() const` - Check if graph has cities
+- `double nearestNeighborTourLength(int startCity = 0) const` - Calculate tour length using greedy nearest neighbor heuristic
 
 **Dependencies:** City
 
@@ -263,6 +266,7 @@ Default values for ACO:
 
 - Distance matrix is symmetric for Euclidean TSP
 - Matrix computed once at construction for efficiency (O(n²) construction, O(1) lookup)
+- Nearest neighbor heuristic used to compute initial pheromone value: τ₀ = m / C^nn
 
 ---
 
@@ -376,7 +380,7 @@ Default values for ACO:
 **Methods:**
 
 - `AntColony(const Graph& graph, int numAnts, double alpha, double beta, double rho, double Q)` - Constructor
-- `void initialize()` - Initialize pheromones and ants
+- `void initialize()` - Initialize pheromones using τ₀ = m / C^nn formula and reset state
 - `void runIteration()` - Execute one complete iteration
 - `void constructSolutions()` - All ants build tours
 - `void updatePheromones()` - Evaporate and deposit pheromones
@@ -388,6 +392,8 @@ Default values for ACO:
 
 **Notes:**
 
+- Initial pheromone computed as τ₀ = m / C^nn (recommended in ACO literature)
+- Falls back to τ₀ = 1.0 if nearest neighbor tour length is zero or invalid
 - Can implement different pheromone update strategies (ant-cycle, ant-quantity, etc.)
 - Consider elitist strategy (only best ant deposits pheromones)
 

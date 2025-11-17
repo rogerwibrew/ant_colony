@@ -4,6 +4,7 @@
  */
 
 #include "Graph.h"
+#include <limits>
 
 /**
  * Main constructor - builds the graph and precomputes all distances.
@@ -81,4 +82,60 @@ const std::vector<City>& Graph::getCities() const {
 // Check if graph is valid (contains at least one city)
 bool Graph::isValid() const {
     return numCities_ > 0;
+}
+
+/**
+ * Calculate tour length using the nearest neighbor heuristic.
+ * This greedy approach always visits the closest unvisited city next.
+ *
+ * The nearest neighbor heuristic provides a reasonable (though not optimal)
+ * tour length that can be used to initialize pheromone values using the
+ * formula: τ₀ = m / C^nn, where m is the number of ants and C^nn is the
+ * nearest neighbor tour length.
+ *
+ * @param startCity Starting city for the tour construction (default: 0)
+ * @return The total tour length using nearest neighbor heuristic
+ */
+double Graph::nearestNeighborTourLength(int startCity) const {
+    if (numCities_ <= 1) {
+        return 0.0;
+    }
+
+    std::vector<bool> visited(numCities_, false);
+    int currentCity = startCity;
+    visited[currentCity] = true;
+    double totalLength = 0.0;
+    int citiesVisited = 1;
+
+    // Build tour by always selecting nearest unvisited city
+    while (citiesVisited < numCities_) {
+        double minDistance = std::numeric_limits<double>::max();
+        int nearestCity = -1;
+
+        // Find the nearest unvisited city
+        for (int i = 0; i < numCities_; ++i) {
+            if (!visited[i]) {
+                double distance = getDistance(currentCity, i);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestCity = i;
+                }
+            }
+        }
+
+        // Move to nearest city
+        if (nearestCity != -1) {
+            totalLength += minDistance;
+            currentCity = nearestCity;
+            visited[currentCity] = true;
+            citiesVisited++;
+        } else {
+            break; // Should not happen if graph is valid
+        }
+    }
+
+    // Add distance to return to start city
+    totalLength += getDistance(currentCity, startCity);
+
+    return totalLength;
 }

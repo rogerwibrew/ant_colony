@@ -76,6 +76,17 @@ public:
      */
     bool isValid() const;
 
+    /**
+     * @brief Calculate tour length using nearest neighbor heuristic
+     * @param startCity Starting city index (default: 0)
+     * @return double The tour length using greedy nearest neighbor approach
+     *
+     * This is used to compute a reasonable initial pheromone value.
+     * The nearest neighbor heuristic builds a tour by always visiting
+     * the closest unvisited city next.
+     */
+    double nearestNeighborTourLength(int startCity = 0) const;
+
 private:
     std::vector<City> cities_;                          ///< All cities in the problem
     std::vector<std::vector<double>> distanceMatrix_;   ///< Precomputed n×n distance matrix
