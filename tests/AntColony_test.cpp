@@ -1,0 +1,348 @@
+#include <gtest/gtest.h>
+#include "AntColony.h"
+#include "Graph.h"
+#include "City.h"
+
+// Helper function to create a simple triangle graph
+Graph createTriangleGraph() {
+    std::vector<City> cities = {
+        City(0, 0.0, 0.0),
+        City(1, 3.0, 0.0),
+        City(2, 0.0, 4.0)
+    };
+    return Graph(cities);
+}
+
+// Helper function to create a square graph
+Graph createSquareGraph() {
+    std::vector<City> cities = {
+        City(0, 0.0, 0.0),
+        City(1, 1.0, 0.0),
+        City(2, 1.0, 1.0),
+        City(3, 0.0, 1.0)
+    };
+    return Graph(cities);
+}
+
+// Test constructor
+TEST(AntColonyTest, Constructor) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    EXPECT_EQ(colony.getNumAnts(), 10);
+    EXPECT_DOUBLE_EQ(colony.getAlpha(), 1.0);
+    EXPECT_DOUBLE_EQ(colony.getBeta(), 2.0);
+    EXPECT_DOUBLE_EQ(colony.getRho(), 0.5);
+    EXPECT_DOUBLE_EQ(colony.getQ(), 100.0);
+}
+
+// Test initialize
+TEST(AntColonyTest, Initialize) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 5, 1.0, 2.0, 0.5, 100.0);
+
+    colony.initialize();
+
+    EXPECT_EQ(colony.getConvergenceData().size(), 0);
+}
+
+// Test constructSolutions
+TEST(AntColonyTest, ConstructSolutions) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.initialize();
+    colony.constructSolutions();
+
+    // All ants should have constructed complete tours
+    // We can't directly access ants, but we can run an iteration and check convergence data
+}
+
+// Test runIteration
+TEST(AntColonyTest, RunIteration) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.initialize();
+    colony.runIteration();
+
+    // Should have one iteration recorded
+    EXPECT_EQ(colony.getConvergenceData().size(), 1);
+
+    // Best tour distance should be > 0
+    EXPECT_GT(colony.getBestTour().getDistance(), 0.0);
+}
+
+// Test multiple iterations
+TEST(AntColonyTest, MultipleIterations) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.initialize();
+    colony.runIteration();
+    colony.runIteration();
+    colony.runIteration();
+
+    EXPECT_EQ(colony.getConvergenceData().size(), 3);
+}
+
+// Test solve method
+TEST(AntColonyTest, Solve) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(10);
+
+    EXPECT_EQ(colony.getConvergenceData().size(), 10);
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+    EXPECT_EQ(bestTour.getSequence().size(), 3);
+
+    // Verify tour is valid
+    EXPECT_TRUE(bestTour.validate(3));
+}
+
+// Test convergence - best tour should improve or stay same
+TEST(AntColonyTest, Convergence) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(20);
+
+    const auto& convergenceData = colony.getConvergenceData();
+    EXPECT_EQ(convergenceData.size(), 20);
+
+    // Best tour from solve should match the best from convergence data
+    double minConvergence = *std::min_element(convergenceData.begin(), convergenceData.end());
+    EXPECT_DOUBLE_EQ(bestTour.getDistance(), minConvergence);
+}
+
+// Test that best tour doesn't get worse over iterations
+TEST(AntColonyTest, BestTourMonotonic) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+
+    colony.initialize();
+
+    double previousBest = std::numeric_limits<double>::max();
+
+    for (int i = 0; i < 10; ++i) {
+        colony.runIteration();
+        double currentBest = colony.getBestTour().getDistance();
+
+        // Best should never get worse
+        EXPECT_LE(currentBest, previousBest);
+        previousBest = currentBest;
+    }
+}
+
+// Test small problem - triangle (known optimal is perimeter)
+TEST(AntColonyTest, TriangleProblem) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(50);
+
+    // Triangle perimeter: 3 + 4 + 5 = 12.0
+    // ACO should find this or very close to it
+    EXPECT_NEAR(bestTour.getDistance(), 12.0, 0.1);
+}
+
+// Test single city
+TEST(AntColonyTest, SingleCity) {
+    std::vector<City> cities = { City(0, 0.0, 0.0) };
+    Graph graph(cities);
+    AntColony colony(graph, 5, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(5);
+
+    EXPECT_EQ(bestTour.getSequence().size(), 1);
+    EXPECT_DOUBLE_EQ(bestTour.getDistance(), 0.0);
+}
+
+// Test two cities
+TEST(AntColonyTest, TwoCities) {
+    std::vector<City> cities = {
+        City(0, 0.0, 0.0),
+        City(1, 5.0, 0.0)
+    };
+    Graph graph(cities);
+    AntColony colony(graph, 5, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(5);
+
+    EXPECT_EQ(bestTour.getSequence().size(), 2);
+    // Distance should be 5 + 5 = 10
+    EXPECT_DOUBLE_EQ(bestTour.getDistance(), 10.0);
+}
+
+// Test different alpha values
+TEST(AntColonyTest, DifferentAlpha) {
+    Graph graph = createTriangleGraph();
+
+    // Alpha = 0 (ignore pheromone)
+    AntColony colony1(graph, 10, 0.0, 2.0, 0.5, 100.0);
+    Tour tour1 = colony1.solve(10);
+    EXPECT_GT(tour1.getDistance(), 0.0);
+
+    // Alpha = 2 (high pheromone importance)
+    AntColony colony2(graph, 10, 2.0, 2.0, 0.5, 100.0);
+    Tour tour2 = colony2.solve(10);
+    EXPECT_GT(tour2.getDistance(), 0.0);
+}
+
+// Test different beta values
+TEST(AntColonyTest, DifferentBeta) {
+    Graph graph = createTriangleGraph();
+
+    // Beta = 0 (ignore distance)
+    AntColony colony1(graph, 10, 1.0, 0.0, 0.5, 100.0);
+    Tour tour1 = colony1.solve(10);
+    EXPECT_GT(tour1.getDistance(), 0.0);
+
+    // Beta = 5 (high distance importance)
+    AntColony colony2(graph, 10, 1.0, 5.0, 0.5, 100.0);
+    Tour tour2 = colony2.solve(10);
+    EXPECT_GT(tour2.getDistance(), 0.0);
+}
+
+// Test different evaporation rates
+TEST(AntColonyTest, DifferentEvaporationRates) {
+    Graph graph = createSquareGraph();
+
+    // Low evaporation (rho = 0.1)
+    AntColony colony1(graph, 10, 1.0, 2.0, 0.1, 100.0);
+    Tour tour1 = colony1.solve(10);
+    EXPECT_GT(tour1.getDistance(), 0.0);
+
+    // High evaporation (rho = 0.9)
+    AntColony colony2(graph, 10, 1.0, 2.0, 0.9, 100.0);
+    Tour tour2 = colony2.solve(10);
+    EXPECT_GT(tour2.getDistance(), 0.0);
+}
+
+// Test different Q values
+TEST(AntColonyTest, DifferentQValues) {
+    Graph graph = createSquareGraph();
+
+    // Small Q
+    AntColony colony1(graph, 10, 1.0, 2.0, 0.5, 10.0);
+    Tour tour1 = colony1.solve(10);
+    EXPECT_GT(tour1.getDistance(), 0.0);
+
+    // Large Q
+    AntColony colony2(graph, 10, 1.0, 2.0, 0.5, 1000.0);
+    Tour tour2 = colony2.solve(10);
+    EXPECT_GT(tour2.getDistance(), 0.0);
+}
+
+// Test different number of ants
+TEST(AntColonyTest, DifferentNumAnts) {
+    Graph graph = createSquareGraph();
+
+    // Few ants
+    AntColony colony1(graph, 3, 1.0, 2.0, 0.5, 100.0);
+    Tour tour1 = colony1.solve(10);
+    EXPECT_GT(tour1.getDistance(), 0.0);
+
+    // Many ants
+    AntColony colony2(graph, 50, 1.0, 2.0, 0.5, 100.0);
+    Tour tour2 = colony2.solve(10);
+    EXPECT_GT(tour2.getDistance(), 0.0);
+}
+
+// Test that solve returns best tour
+TEST(AntColonyTest, SolveReturnsBestTour) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(10);
+
+    // Best tour from solve should match getBestTour
+    EXPECT_DOUBLE_EQ(bestTour.getDistance(), colony.getBestTour().getDistance());
+    EXPECT_EQ(bestTour.getSequence(), colony.getBestTour().getSequence());
+}
+
+// Test convergence data length
+TEST(AntColonyTest, ConvergenceDataLength) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.solve(25);
+
+    EXPECT_EQ(colony.getConvergenceData().size(), 25);
+}
+
+// Test that all convergence values are positive
+TEST(AntColonyTest, ConvergenceDataPositive) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.solve(15);
+
+    for (double distance : colony.getConvergenceData()) {
+        EXPECT_GT(distance, 0.0);
+    }
+}
+
+// Test square problem (optimal tour should be perimeter)
+TEST(AntColonyTest, SquareProblem) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 30, 1.0, 2.0, 0.5, 100.0);
+
+    Tour bestTour = colony.solve(100);
+
+    // Square perimeter: 1 + 1 + 1 + 1 = 4.0
+    // ACO should find this or very close to it
+    EXPECT_NEAR(bestTour.getDistance(), 4.0, 0.1);
+}
+
+// Test that multiple solve calls reset properly
+TEST(AntColonyTest, MultipleSolveCalls) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    Tour tour1 = colony.solve(5);
+    EXPECT_EQ(colony.getConvergenceData().size(), 5);
+
+    Tour tour2 = colony.solve(10);
+    EXPECT_EQ(colony.getConvergenceData().size(), 10);  // Should reset
+}
+
+// Test parameter getters
+TEST(AntColonyTest, ParameterGetters) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 15, 1.5, 2.5, 0.6, 150.0);
+
+    EXPECT_EQ(colony.getNumAnts(), 15);
+    EXPECT_DOUBLE_EQ(colony.getAlpha(), 1.5);
+    EXPECT_DOUBLE_EQ(colony.getBeta(), 2.5);
+    EXPECT_DOUBLE_EQ(colony.getRho(), 0.6);
+    EXPECT_DOUBLE_EQ(colony.getQ(), 150.0);
+}
+
+// Test that solution improves over iterations (on average)
+TEST(AntColonyTest, SolutionImprovement) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+
+    colony.solve(50);
+
+    const auto& convergenceData = colony.getConvergenceData();
+
+    // Average of first 10 iterations
+    double earlyAvg = 0.0;
+    for (int i = 0; i < 10; ++i) {
+        earlyAvg += convergenceData[i];
+    }
+    earlyAvg /= 10.0;
+
+    // Average of last 10 iterations
+    double lateAvg = 0.0;
+    for (int i = 40; i < 50; ++i) {
+        lateAvg += convergenceData[i];
+    }
+    lateAvg /= 10.0;
+
+    // Later iterations should generally have better (lower) distances
+    EXPECT_LE(lateAvg, earlyAvg);
+}

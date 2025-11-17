@@ -1,0 +1,53 @@
+# Build directories
+build/
+bin/
+lib/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# Compiled object files
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+ant_colony_tsp
+ant_colony_tests
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Compile commands for LSP (symlink)
+compile_commands.json
+
+# Test output
+Testing/
+
+# Compressed files (already extracted)
+*.gz
+*.zip
+*.tar
+
+# Backup files
+*.bak
+*.backup
+
+# clangd cache
+.cache/
