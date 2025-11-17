@@ -23,7 +23,10 @@ static std::string findFile(const std::string& filename) {
         filename,                    // Current directory or absolute path
         "data/" + filename,          // data/ subdirectory
         "../data/" + filename,       // data/ from build directory
-        "../../data/" + filename     // data/ from build/bin directory
+        "../../data/" + filename,    // data/ from build/bin directory
+        "tests/data/" + filename,    // tests/data/ subdirectory
+        "../tests/data/" + filename, // tests/data/ from build directory
+        "../../tests/data/" + filename  // tests/data/ from build/bin directory
     };
 
     for (const auto& path : searchPaths) {
@@ -147,7 +150,9 @@ TSPLoader::FileFormat TSPLoader::detectFormat() const {
  * @return Graph constructed from the coordinates, or empty Graph on error
  */
 Graph TSPLoader::loadFromCoordinates(const std::string& filename) {
-    std::ifstream file(filename);
+    // Use findFile to search common locations for the file
+    std::string filepath = findFile(filename);
+    std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Error: Cannot open file: " << filename << std::endl;
         return Graph();
@@ -230,7 +235,9 @@ Graph TSPLoader::loadFromCoordinates(const std::string& filename) {
  * @return Graph with synthetic coordinates, or empty Graph on error
  */
 Graph TSPLoader::loadFromDistanceMatrix(const std::string& filename) {
-    std::ifstream file(filename);
+    // Use findFile to search common locations for the file
+    std::string filepath = findFile(filename);
+    std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Error: Cannot open file: " << filename << std::endl;
         return Graph();
@@ -327,7 +334,9 @@ Graph TSPLoader::loadFromDistanceMatrix(const std::string& filename) {
  * @return Graph constructed from the TSPLIB data
  */
 Graph TSPLoader::loadFromTSPLIB(const std::string& filename) {
-    std::ifstream file(filename);
+    // Use findFile to search common locations for the file
+    std::string filepath = findFile(filename);
+    std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Error: Cannot open file: " << filename << std::endl;
         return Graph();
