@@ -2,6 +2,10 @@
 #include <algorithm>
 #include <limits>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 PheromoneMatrix::PheromoneMatrix(int numCities, double initial)
     : numCities_(numCities),
       initialPheromone_(initial),
@@ -30,6 +34,10 @@ void PheromoneMatrix::setPheromone(int cityA, int cityB, double value) {
 }
 
 void PheromoneMatrix::evaporate(double rho) {
+    // Parallelize evaporation - no dependencies between iterations
+    #ifdef _OPENMP
+    #pragma omp parallel for collapse(2)
+    #endif
     for (int i = 0; i < numCities_; ++i) {
         for (int j = 0; j < numCities_; ++j) {
             pheromones_[i][j] *= (1.0 - rho);
@@ -38,9 +46,17 @@ void PheromoneMatrix::evaporate(double rho) {
 }
 
 void PheromoneMatrix::depositPheromone(int cityA, int cityB, double amount) {
+    // Use atomic operations for thread safety when multiple ants may update same edge
+    #ifdef _OPENMP
+    #pragma omp atomic
+    #endif
     pheromones_[cityA][cityB] += amount;
+
     // Keep matrix symmetric for undirected TSP (only if different cities)
     if (cityA != cityB) {
+        #ifdef _OPENMP
+        #pragma omp atomic
+        #endif
         pheromones_[cityB][cityA] += amount;
     }
 }

@@ -6,6 +6,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# OpenMP support (optional but recommended for parallel performance)
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP found - parallel execution enabled")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+else()
+    message(WARNING "OpenMP not found - will use serial execution")
+endif()
+
 # Generate compile_commands.json for clang tooling (clangd, etc.)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -35,6 +44,11 @@ target_include_directories(ant_colony_tsp
     PUBLIC
         ${PROJECT_SOURCE_DIR}/include
 )
+
+# Link OpenMP if found
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(ant_colony_tsp OpenMP::OpenMP_CXX)
+endif()
 
 # ============================================================================
 # Google Test Setup
@@ -76,6 +90,11 @@ if(TEST_SOURCES)
         gtest_main
         gmock
     )
+
+    # Link OpenMP to tests if found
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(ant_colony_tests OpenMP::OpenMP_CXX)
+    endif()
 
     # Discover tests for CTest
     include(GoogleTest)

@@ -3,6 +3,10 @@
 #include <random>
 #include <algorithm>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 AntColony::AntColony(const Graph& graph, int numAnts, double alpha, double beta,
                      double rho, double Q, bool useDistinctStartCities)
     : graph_(graph),
@@ -41,8 +45,9 @@ void AntColony::initialize() {
 void AntColony::constructSolutions() {
     int numCities = graph_.getNumCities();
 
-    // Clear ants and recreate them
+    // Clear ants and recreate them - must be done before parallel region
     ants_.clear();
+    ants_.reserve(numAnts_);  // Pre-allocate to avoid reallocation
 
     if (useDistinctStartCities_) {
         // Assign each ant to a different starting city
@@ -65,7 +70,12 @@ void AntColony::constructSolutions() {
     }
 
     // Each ant constructs a complete tour
-    for (auto& ant : ants_) {
+    // Parallelize this loop - each ant operates independently
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic)
+    #endif
+    for (int i = 0; i < numAnts_; ++i) {
+        Ant& ant = ants_[i];
         while (!ant.hasVisitedAll()) {
             int nextCity = ant.selectNextCity(graph_, pheromones_, alpha_, beta_);
 
@@ -113,7 +123,45 @@ void AntColony::runIteration() {
 
     // Find best tour in this iteration
     double iterationBest = std::numeric_limits<double>::max();
+    Tour iterationBestTour;
 
+    // Process all ants to find the best - can be parallelized
+    #ifdef _OPENMP
+    #pragma omp parallel
+    {
+        // Each thread tracks its own best
+        double threadBest = std::numeric_limits<double>::max();
+        Tour threadBestTour;
+
+        #pragma omp for nowait
+        for (size_t i = 0; i < ants_.size(); ++i) {
+            if (!ants_[i].hasVisitedAll()) {
+                continue;
+            }
+
+            Tour tour = ants_[i].completeTour(graph_);
+            double tourLength = tour.getDistance();
+
+            if (tourLength < threadBest) {
+                threadBest = tourLength;
+                threadBestTour = tour;
+            }
+        }
+
+        // Merge thread results into global best
+        #pragma omp critical
+        {
+            if (threadBest < iterationBest) {
+                iterationBest = threadBest;
+                iterationBestTour = threadBestTour;
+            }
+            if (threadBest < bestTour_.getDistance()) {
+                bestTour_ = threadBestTour;
+            }
+        }
+    }
+    #else
+    // Serial version (no OpenMP)
     for (auto& ant : ants_) {
         if (!ant.hasVisitedAll()) {
             continue;
@@ -124,6 +172,7 @@ void AntColony::runIteration() {
 
         if (tourLength < iterationBest) {
             iterationBest = tourLength;
+            iterationBestTour = tour;
         }
 
         // Update global best
@@ -131,6 +180,7 @@ void AntColony::runIteration() {
             bestTour_ = tour;
         }
     }
+    #endif
 
     // Record iteration best
     iterationBestDistances_.push_back(iterationBest);

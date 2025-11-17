@@ -63,9 +63,9 @@ int Ant::selectNextCity(const Graph& graph, const PheromoneMatrix& pheromones,
 
     // Handle edge case where all probabilities are 0
     if (totalProbability == 0.0) {
-        // Select randomly
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
+        // Select randomly - use thread_local for thread safety
+        thread_local std::random_device rd;
+        thread_local std::mt19937 gen(rd());
         std::uniform_int_distribution<> dist(0, unvisited.size() - 1);
         return unvisited[dist(gen)];
     }
@@ -75,9 +75,9 @@ int Ant::selectNextCity(const Graph& graph, const PheromoneMatrix& pheromones,
         prob /= totalProbability;
     }
 
-    // Roulette wheel selection
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
+    // Roulette wheel selection - use thread_local for thread safety
+    thread_local std::random_device rd;
+    thread_local std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.0, 1.0);
     double random = dist(gen);
 

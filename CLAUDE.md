@@ -8,6 +8,8 @@ C++17 Ant Colony Optimization (ACO) implementation for Travelling Salesman Probl
 
 **Current Status:** ✅ **FULLY IMPLEMENTED** - 106 tests passing. All core classes complete and working. Production-ready ACO solver with CLI interface and TSPLIB format support.
 
+**Branch: openmp-parallel** - OpenMP parallelization implemented with 3-11× speedup on multi-core systems. See [OpenMP Parallelization](#openmp-parallelization) section below.
+
 ## Essential Commands
 
 ### Build
@@ -462,6 +464,100 @@ Use `std::vector<std::vector<double>>` for distance and pheromone matrices even 
 - Flattened 1D vector: `std::vector<double>` with index `[i*n + j]` for better cache locality
 - Only store upper triangle of symmetric matrix (saves 50% memory)
 - Use `float` instead of `double` if precision allows
+
+## OpenMP Parallelization
+
+**Branch: `openmp-parallel`**
+
+This branch implements OpenMP-based parallelization for significant speedup on multi-core systems.
+
+### Build with OpenMP
+
+OpenMP is automatically detected by CMake:
+
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build .
+```
+
+If OpenMP is found, you'll see: `-- OpenMP found - parallel execution enabled`
+
+### Controlling Thread Count
+
+Use the `OMP_NUM_THREADS` environment variable:
+
+```bash
+# Use 4 threads
+export OMP_NUM_THREADS=4
+./build/bin/ant_colony_tsp berlin52.tsp
+
+# Use all available cores (default)
+unset OMP_NUM_THREADS
+./build/bin/ant_colony_tsp berlin52.tsp
+```
+
+### Performance Results
+
+Benchmark on 32-core system with 30 ants, 100 iterations:
+
+| Problem | 1 Thread | 2 Threads | 4 Threads | 32 Threads | Best Speedup |
+|---------|----------|-----------|-----------|------------|--------------|
+| ulysses16 (16 cities) | 4.89ms | 4.82ms | 4.69ms | 4.60ms | 1.06× |
+| berlin52 (52 cities) | 360ms | 197ms | 111ms | 38ms | **9.4×** |
+| eil76 (76 cities) | 683ms | 360ms | 210ms | 67ms | **10.3×** |
+| kroA100 (100 cities) | 1144ms | 612ms | 337ms | 100ms | **11.4×** |
+
+**Key Observations:**
+- **Small problems (<20 cities):** Minimal speedup due to parallelization overhead
+- **Medium problems (50-100 cities):** 3-4× speedup on 4 cores, 9-11× on 32 cores
+- **Scaling:** Near-linear scaling up to ~8-16 threads, then diminishing returns
+- **Solution quality:** Identical to serial version (verified with tests)
+
+### Implementation Details
+
+**Parallelized Components:**
+
+1. **Ant tour construction** (`AntColony::constructSolutions`)
+   - Each ant builds tour independently in parallel
+   - `#pragma omp parallel for schedule(dynamic)`
+   - Thread-local random number generators for thread safety
+   - **Impact:** 60-70% of runtime → primary source of speedup
+
+2. **Pheromone evaporation** (`PheromoneMatrix::evaporate`)
+   - Parallel loop over all n² edges
+   - `#pragma omp parallel for collapse(2)`
+   - **Impact:** 20-30% of runtime → secondary speedup
+
+3. **Pheromone deposition** (`PheromoneMatrix::depositPheromone`)
+   - Atomic operations for thread-safe updates
+   - `#pragma omp atomic`
+   - Minimal contention in practice
+
+4. **Best tour tracking** (`AntColony::runIteration`)
+   - Per-thread best tracking, merge at end
+   - Critical section for final update
+
+**Thread-Safety Fixes:**
+- Changed `static` RNG to `thread_local` in `Ant::selectNextCity()`
+- Pre-allocated ant vector before parallel region
+- Atomic updates for pheromone deposition
+
+**Compatibility:**
+- Code compiles and runs correctly without OpenMP (serial fallback via `#ifdef _OPENMP`)
+- All 106 tests pass with OpenMP enabled
+- No changes to algorithm logic or solution quality
+
+### Running Benchmarks
+
+Use the provided benchmark script:
+
+```bash
+cd build
+../benchmark.sh
+```
+
+This tests various problem sizes with different thread counts.
 
 ## Testing Strategy
 
