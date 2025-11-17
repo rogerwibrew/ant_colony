@@ -93,13 +93,19 @@ void AntColony::updatePheromones() {
     // Evaporate pheromones
     pheromones_.evaporate(rho_);
 
-    // Deposit pheromones from all ants
-    for (auto& ant : ants_) {
-        if (!ant.hasVisitedAll()) {
+    // Deposit pheromones from all ants - parallelize this loop
+    // Use adaptive threading: cap threads at 2× ants to reduce atomic contention
+    #ifdef _OPENMP
+    int max_threads = omp_get_max_threads();
+    int effective_threads = std::min(max_threads, static_cast<int>(ants_.size()) * 2);
+    #pragma omp parallel for num_threads(effective_threads) if(ants_.size() >= 8)
+    #endif
+    for (size_t antIdx = 0; antIdx < ants_.size(); ++antIdx) {
+        if (!ants_[antIdx].hasVisitedAll()) {
             continue; // Skip incomplete tours
         }
 
-        Tour tour = ant.completeTour(graph_);
+        Tour tour = ants_[antIdx].completeTour(graph_);
         double tourLength = tour.getDistance();
 
         // Pheromone deposit amount: Q / tourLength
@@ -108,6 +114,7 @@ void AntColony::updatePheromones() {
         const std::vector<int>& tourSequence = tour.getSequence();
 
         // Deposit pheromones on each edge in the tour
+        // depositPheromone already uses atomic operations for thread safety
         for (size_t i = 0; i < tourSequence.size(); ++i) {
             int cityA = tourSequence[i];
             int cityB = tourSequence[(i + 1) % tourSequence.size()]; // Wrap around to start
