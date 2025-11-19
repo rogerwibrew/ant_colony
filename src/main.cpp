@@ -163,7 +163,9 @@ int main(int argc, char** argv) {
 
     // Progress callback to show updates every 10 iterations
     int lastReportedIteration = 0;
-    auto progressCallback = [&lastReportedIteration](int iteration, double bestDistance) {
+    auto progressCallback = [&lastReportedIteration](int iteration, double bestDistance,
+                                                      const std::vector<int>& /*bestTour*/,
+                                                      const std::vector<double>& /*convergence*/) {
         // Report every 10 iterations
         if (iteration % 10 == 0 || iteration == 1) {
             std::cout << "  Iteration " << std::setw(5) << iteration

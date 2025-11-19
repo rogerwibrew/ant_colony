@@ -163,9 +163,11 @@ Tour AntColony::solve(int maxIterations, ProgressCallback callback) {
                 iterationsWithoutImprovement++;
             }
 
-            // Call progress callback if provided
-            if (callback) {
-                callback(iteration, currentBestDistance);
+            // Call progress callback if provided and at the right interval
+            ProgressCallback activeCallback = callback ? callback : progressCallback_;
+            if (activeCallback && (iteration % callbackInterval_ == 0)) {
+                activeCallback(iteration, currentBestDistance,
+                             bestTour_.getSequence(), iterationBestDistances_);
             }
         }
     } else {
@@ -173,12 +175,23 @@ Tour AntColony::solve(int maxIterations, ProgressCallback callback) {
         for (int i = 0; i < maxIterations; ++i) {
             runIteration();
 
-            // Call progress callback if provided
-            if (callback) {
-                callback(i + 1, bestTour_.getDistance());
+            // Call progress callback if provided and at the right interval
+            int iteration = i + 1;
+            ProgressCallback activeCallback = callback ? callback : progressCallback_;
+            if (activeCallback && (iteration % callbackInterval_ == 0)) {
+                activeCallback(iteration, bestTour_.getDistance(),
+                             bestTour_.getSequence(), iterationBestDistances_);
             }
         }
     }
 
     return bestTour_;
+}
+
+void AntColony::setProgressCallback(ProgressCallback callback) {
+    progressCallback_ = callback;
+}
+
+void AntColony::setCallbackInterval(int interval) {
+    callbackInterval_ = interval;
 }
