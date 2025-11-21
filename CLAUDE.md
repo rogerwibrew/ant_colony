@@ -22,18 +22,19 @@ C++17 Ant Colony Optimization (ACO) implementation for Travelling Salesman Probl
 
 ```bash
 # Initial setup
+cd cpp
 mkdir build && cd build
 cmake ..
 cmake --build .
 
 # Rebuild after changes
-cd build && cmake --build .
+cd cpp/build && cmake --build .
 
 # Clean rebuild (if needed)
-cd build && rm -rf * && cmake .. && cmake --build .
+cd cpp/build && rm -rf * && cmake .. && cmake --build .
 
-# Create compile_commands.json symlink for LSP/clangd support
-ln -s build/compile_commands.json compile_commands.json
+# Create compile_commands.json symlink for LSP/clangd support (from project root)
+ln -s cpp/build/compile_commands.json compile_commands.json
 ```
 
 **Note:** The project includes a `.clangd` configuration file for proper C++17 support and strict include checking.
@@ -42,29 +43,29 @@ ln -s build/compile_commands.json compile_commands.json
 
 ```bash
 # Run all tests (106 passing)
-./build/bin/ant_colony_tests
+./cpp/build/bin/ant_colony_tests
 
 # Use CTest (recommended - shows which tests fail)
-cd build && ctest --output-on-failure
+cd cpp/build && ctest --output-on-failure
 
 # Run CTest with verbose output
-cd build && ctest --verbose
+cd cpp/build && ctest --verbose
 
 # Run specific test suite
-./build/bin/ant_colony_tests --gtest_filter="AntColonyTest.*"
+./cpp/build/bin/ant_colony_tests --gtest_filter="AntColonyTest.*"
 
 # Run specific test
-./build/bin/ant_colony_tests --gtest_filter="GraphTest.DistanceMatrixSymmetry"
+./cpp/build/bin/ant_colony_tests --gtest_filter="GraphTest.DistanceMatrixSymmetry"
 
 # List all available tests
-./build/bin/ant_colony_tests --gtest_list_tests
+./cpp/build/bin/ant_colony_tests --gtest_list_tests
 ```
 
 ### Run
 
 ```bash
 # Basic usage (files auto-discovered in data/ directory)
-cd build/bin
+cd cpp/build/bin
 ./ant_colony_tsp berlin52.tsp
 
 # With custom parameters
@@ -74,7 +75,7 @@ cd build/bin
 ./ant_colony_tsp --help
 
 # Works from any directory - files automatically found in data/
-cd build && ./bin/ant_colony_tsp berlin52.tsp
+cd cpp/build && ./bin/ant_colony_tsp berlin52.tsp
 ```
 
 **Note:** TSPLoader automatically searches for files in `data/`, `../data/`, and `../../data/`, so you can run from any directory without specifying the full path.
@@ -115,33 +116,38 @@ Load TSP Instance → Initialize Colony → For each iteration:
 ## File Organization
 
 ```
-include/     - Header files (.h)
-  ├── City.h, Graph.h, Tour.h
-  ├── PheromoneMatrix.h, Ant.h, AntColony.h
-  └── TSPLoader.h
-src/         - Implementation (.cpp), main.cpp excluded from tests
-  ├── City.cpp, Graph.cpp, Tour.cpp
-  ├── PheromoneMatrix.cpp, Ant.cpp, AntColony.cpp
-  ├── TSPLoader.cpp
-  └── main.cpp
-tests/       - Google Test files (*_test.cpp)
-  ├── City_test.cpp, Graph_test.cpp, Tour_test.cpp
-  ├── PheromoneMatrix_test.cpp, Ant_test.cpp, AntColony_test.cpp
-  ├── TSPLoader_test.cpp, example_test.cpp
-  └── data/  - Test input files (simple_5.txt, triangle_3.txt, matrix_4.txt, invalid.txt)
-data/        - TSPLIB benchmark instances (113+ files)
+cpp/              - C++ core implementation
+  ├── include/    - Header files (.h)
+  │   ├── City.h, Graph.h, Tour.h
+  │   ├── PheromoneMatrix.h, Ant.h, AntColony.h
+  │   └── TSPLoader.h
+  ├── src/        - Implementation (.cpp), main.cpp excluded from tests
+  │   ├── City.cpp, Graph.cpp, Tour.cpp
+  │   ├── PheromoneMatrix.cpp, Ant.cpp, AntColony.cpp
+  │   ├── TSPLoader.cpp
+  │   └── main.cpp
+  ├── tests/      - Google Test files (*_test.cpp)
+  │   ├── City_test.cpp, Graph_test.cpp, Tour_test.cpp
+  │   ├── PheromoneMatrix_test.cpp, Ant_test.cpp, AntColony_test.cpp
+  │   ├── TSPLoader_test.cpp, example_test.cpp
+  │   └── data/   - Test input files (simple_5.txt, triangle_3.txt, matrix_4.txt, invalid.txt)
+  ├── build/      - CMake build directory (gitignored)
+  │   └── bin/    - Compiled executables (ant_colony_tsp, ant_colony_tests)
+  └── CMakeLists.txt
+data/             - TSPLIB benchmark instances (113+ files, shared by all components)
   ├── berlin52.tsp, ulysses16.tsp, att48.tsp, eil51.tsp
   └── ... (many more EUC_2D problems)
-build/       - CMake build directory (gitignored)
-  └── bin/   - Compiled executables (ant_colony_tsp, ant_colony_tests)
+python_bindings/  - pybind11 Python bindings
+backend/          - Flask API with WebSocket support
+frontend/         - Next.js web interface
 ```
 
-**Note:** `compile_commands.json` in the root is a symlink to `build/compile_commands.json` (gitignored but useful for LSP).
+**Note:** `compile_commands.json` in the root is a symlink to `cpp/build/compile_commands.json` (gitignored but useful for LSP).
 
 ## Adding New Classes
 
-1. Create `include/ClassName.h` and `src/ClassName.cpp`
-2. Add `tests/ClassName_test.cpp`
+1. Create `cpp/include/ClassName.h` and `cpp/src/ClassName.cpp`
+2. Add `cpp/tests/ClassName_test.cpp`
 3. CMake auto-discovers via GLOB_RECURSE - just rebuild
 
 ## Input File Formats

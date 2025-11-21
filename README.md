@@ -6,14 +6,17 @@ A C++ implementation of Ant Colony Optimization algorithm for solving the Travel
 
 ```
 ant_colony/
-├── include/              # C++ header files (.h)
-├── src/                  # C++ source files (.cpp)
-├── tests/                # Google Test files
-├── data/                 # TSPLIB benchmark instances (113+ files)
+├── cpp/                  # C++ core implementation
+│   ├── include/          # C++ header files (.h)
+│   ├── src/              # C++ source files (.cpp)
+│   ├── tests/            # Google Test files
+│   ├── build/            # CMake build directory
+│   └── CMakeLists.txt    # CMake configuration
+├── data/                 # TSPLIB benchmark instances (113+ files, shared)
 ├── python_bindings/      # pybind11 Python bindings
 ├── backend/              # Flask API with WebSocket support
 ├── frontend/             # Next.js web interface
-├── CMakeLists.txt        # CMake configuration
+├── Makefile              # Development commands (start/stop servers)
 └── CLAUDE.md             # Class specifications and design
 ```
 
@@ -23,6 +26,7 @@ ant_colony/
 
 ```bash
 # Build
+cd cpp
 mkdir build && cd build
 cmake .. && cmake --build .
 
@@ -133,6 +137,7 @@ React-based web interface featuring:
 ### C++ Build
 
 ```bash
+cd cpp
 mkdir build && cd build
 cmake ..
 cmake --build .

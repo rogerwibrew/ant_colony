@@ -13,13 +13,13 @@ import sys
 # Get C++ source files (all implementation files except main.cpp)
 cpp_sources = [
     'bindings.cpp',
-    '../src/City.cpp',
-    '../src/Graph.cpp',
-    '../src/Tour.cpp',
-    '../src/TSPLoader.cpp',
-    '../src/PheromoneMatrix.cpp',
-    '../src/Ant.cpp',
-    '../src/AntColony.cpp',
+    '../cpp/src/City.cpp',
+    '../cpp/src/Graph.cpp',
+    '../cpp/src/Tour.cpp',
+    '../cpp/src/TSPLoader.cpp',
+    '../cpp/src/PheromoneMatrix.cpp',
+    '../cpp/src/Ant.cpp',
+    '../cpp/src/AntColony.cpp',
 ]
 
 # Compiler flags
@@ -35,7 +35,7 @@ ext_modules = [
     Pybind11Extension(
         "aco_solver",
         cpp_sources,
-        include_dirs=['../include'],
+        include_dirs=['../cpp/include'],
         cxx_std=17,
         extra_compile_args=extra_compile_args,
         define_macros=[('VERSION_INFO', '1.0.0')],
