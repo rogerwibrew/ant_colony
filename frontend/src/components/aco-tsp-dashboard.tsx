@@ -43,12 +43,20 @@ export function AcoTspDashboard() {
     rho: number
     alpha: number
     beta: number
+    iterations: number
+    numAnts: number | null
+    useConvergence: boolean
+    convergenceIterations: number
   }) => {
     solve({
       benchmark: config.problem,
       alpha: config.alpha,
       beta: config.beta,
       rho: config.rho,
+      iterations: config.iterations,
+      num_ants: config.numAnts,
+      use_convergence: config.useConvergence,
+      convergence_iterations: config.convergenceIterations,
     })
   }
 

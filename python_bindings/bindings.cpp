@@ -213,6 +213,9 @@ PYBIND11_MODULE(aco_solver, m) {
         .def("setCallbackInterval", &AntColony::setCallbackInterval,
              py::arg("interval"),
              "Set callback interval (default: 10 iterations)")
+        .def("setConvergenceThreshold", &AntColony::setConvergenceThreshold,
+             py::arg("threshold"),
+             "Set convergence threshold (default: 200 iterations without improvement)")
         .def("getNumAnts", &AntColony::getNumAnts,
              "Get number of ants")
         .def("getAlpha", &AntColony::getAlpha,

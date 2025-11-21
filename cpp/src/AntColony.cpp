@@ -143,13 +143,12 @@ Tour AntColony::solve(int maxIterations, ProgressCallback callback) {
     initialize();
 
     if (maxIterations < 0) {
-        // Run until no improvement for 200 iterations
-        const int NO_IMPROVEMENT_LIMIT = 200;
+        // Run until no improvement for convergenceThreshold_ iterations
         int iterationsWithoutImprovement = 0;
         int iteration = 0;
         double lastBestDistance = std::numeric_limits<double>::max();
 
-        while (iterationsWithoutImprovement < NO_IMPROVEMENT_LIMIT) {
+        while (iterationsWithoutImprovement < convergenceThreshold_) {
             runIteration();
             iteration++;
 
@@ -194,4 +193,8 @@ void AntColony::setProgressCallback(ProgressCallback callback) {
 
 void AntColony::setCallbackInterval(int interval) {
     callbackInterval_ = interval;
+}
+
+void AntColony::setConvergenceThreshold(int threshold) {
+    convergenceThreshold_ = threshold;
 }

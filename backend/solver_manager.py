@@ -56,12 +56,20 @@ class SolverManager:
             raise RuntimeError("No valid graph loaded")
 
         # Extract parameters with defaults
-        num_ants = params.get('numAnts', Config.DEFAULT_PARAMS['numAnts'])
+        num_ants = params.get('numAnts')
+        if num_ants is None:
+            # Auto-calculate based on problem size (heuristic: 1-2 ants per city)
+            num_ants = max(10, min(100, self.graph.getNumCities()))
+
         iterations = params.get('iterations', Config.DEFAULT_PARAMS['iterations'])
         alpha = params.get('alpha', Config.DEFAULT_PARAMS['alpha'])
         beta = params.get('beta', Config.DEFAULT_PARAMS['beta'])
         rho = params.get('rho', Config.DEFAULT_PARAMS['rho'])
         Q = params.get('Q', Config.DEFAULT_PARAMS['Q'])
+
+        # Convergence criterion
+        use_convergence = params.get('useConvergence', False)
+        convergence_iterations = params.get('convergenceIterations', 200)
 
         # Create colony
         colony = aco_solver.AntColony(
@@ -80,13 +88,37 @@ class SolverManager:
         self.start_time = time.time()
         self.is_running = True
 
+        # Track convergence
+        best_distance_tracker = [float('inf')]
+        iterations_without_improvement = [0]
+        actual_iterations = [0]
+
         def progress_callback(iteration, best_distance, best_tour, convergence):
             """Called from C++ every N iterations"""
             if not self.is_running:
                 return
 
             elapsed = time.time() - self.start_time
-            progress_pct = (iteration / iterations) * 100
+
+            # Track convergence for early stopping
+            if use_convergence:
+                if best_distance < best_distance_tracker[0]:
+                    best_distance_tracker[0] = best_distance
+                    iterations_without_improvement[0] = 0
+                else:
+                    iterations_without_improvement[0] += 10  # Callback interval
+
+                # Check if we should stop
+                if iterations_without_improvement[0] >= convergence_iterations:
+                    self.is_running = False
+                    actual_iterations[0] = iteration
+                    return
+
+                progress_pct = min(100, (iterations_without_improvement[0] / convergence_iterations) * 100)
+            else:
+                progress_pct = (iteration / iterations) * 100
+
+            actual_iterations[0] = iteration
 
             # Emit progress update via WebSocket
             self.socketio.emit('progress', {
@@ -96,7 +128,8 @@ class SolverManager:
                 'convergenceHistory': convergence,
                 'cities': self.cities_coords,
                 'elapsedTime': round(elapsed, 2),
-                'progress': round(progress_pct, 1)
+                'progress': round(progress_pct, 1),
+                'iterationsWithoutImprovement': iterations_without_improvement[0] if use_convergence else None
             })
 
         # Set callback interval (every 10 iterations by default)
@@ -104,7 +137,9 @@ class SolverManager:
         colony.setCallbackInterval(10)
 
         # Solve (this releases GIL, allowing other Python threads to run)
-        best_tour = colony.solve(iterations)
+        # If using convergence, set high iteration count and rely on callback to stop
+        max_iterations = 10000 if use_convergence else iterations
+        best_tour = colony.solve(max_iterations)
 
         # Send final result
         elapsed = time.time() - self.start_time
@@ -116,8 +151,9 @@ class SolverManager:
             'convergenceHistory': colony.getConvergenceData(),
             'cities': self.cities_coords,
             'elapsedTime': round(elapsed, 2),
-            'totalIterations': iterations,
-            'benchmark': self.benchmark_name
+            'totalIterations': actual_iterations[0] if use_convergence else iterations,
+            'benchmark': self.benchmark_name,
+            'stoppedByConvergence': use_convergence and iterations_without_improvement[0] >= convergence_iterations
         }
 
     def stop(self):

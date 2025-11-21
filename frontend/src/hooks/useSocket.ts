@@ -7,12 +7,14 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:500
 
 export interface SolveParams {
   benchmark: string
-  num_ants?: number
+  num_ants?: number | null
   iterations?: number
   alpha?: number
   beta?: number
   rho?: number
   q?: number
+  use_convergence?: boolean
+  convergence_iterations?: number
 }
 
 export interface CityData {
@@ -144,6 +146,11 @@ export function useSocket(): UseSocketReturn {
     setIsRunning(true)
 
     addLog(`Starting solver on ${params.benchmark}`)
+    if (params.use_convergence) {
+      addLog(`Convergence mode: stop after ${params.convergence_iterations} iterations without improvement`)
+    } else {
+      addLog(`Fixed iterations: ${params.iterations || 100}`)
+    }
     addLog(`Params: α=${params.alpha}, β=${params.beta}, ρ=${params.rho}`)
 
     // Backend expects { benchmark, params: { alpha, beta, rho, ... } }
@@ -156,6 +163,8 @@ export function useSocket(): UseSocketReturn {
         numAnts: params.num_ants,
         iterations: params.iterations,
         Q: params.q,
+        useConvergence: params.use_convergence,
+        convergenceIterations: params.convergence_iterations,
       },
     }
     console.log("Emitting solve event:", payload)

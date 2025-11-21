@@ -30,7 +30,7 @@ public:
     void updatePheromones();
 
     // Run algorithm for specified iterations (or until convergence if maxIterations < 0)
-    // If maxIterations < 0, runs until no improvement for 200 iterations
+    // If maxIterations < 0, runs until no improvement for convergenceThreshold_ iterations
     Tour solve(int maxIterations, ProgressCallback callback = nullptr);
 
     // Set progress callback (alternative to passing to solve())
@@ -38,6 +38,9 @@ public:
 
     // Set callback interval (default: 10 iterations)
     void setCallbackInterval(int interval);
+
+    // Set convergence threshold (default: 200 iterations without improvement)
+    void setConvergenceThreshold(int threshold);
 
     // Get best solution found
     const Tour& getBestTour() const { return bestTour_; }
@@ -66,6 +69,7 @@ private:
     std::vector<double> iterationBestDistances_;
     ProgressCallback progressCallback_;  // Callback for progress updates
     int callbackInterval_ = 10;          // Invoke callback every N iterations
+    int convergenceThreshold_ = 200;     // Iterations without improvement before stopping
 };
 
 #endif // ANTCOLONY_H
