@@ -8,6 +8,14 @@ C++17 Ant Colony Optimization (ACO) implementation for Travelling Salesman Probl
 
 **Current Status:** ✅ **FULLY IMPLEMENTED** - 106 tests passing. All core classes complete and working. Production-ready ACO solver with CLI interface and TSPLIB format support.
 
+## Roadmap / Planned Tasks
+
+1. **Fix UI** - Improve the web interface
+2. **Multi-core CPU support** - Integrate parallel processing using multiple CPU cores (separate branch)
+3. **GPU acceleration** - Integrate GPU operations for performance
+4. **Additional solution methods** - Add elite ant and other ACO variants
+5. **Full TSPLIB95 support** - Add all TSPLIB95 problems to the potential list, including fixing incompatible files in `uncompatibleData/`
+
 ## Essential Commands
 
 ### Build
