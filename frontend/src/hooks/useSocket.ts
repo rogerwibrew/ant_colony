@@ -50,6 +50,7 @@ export interface UseSocketReturn {
   convergenceData: { iteration: number; length: number }[]
   statusLog: string[]
   solve: (params: SolveParams) => void
+  preview: (benchmark: string) => void
   stop: () => void
 }
 
@@ -103,6 +104,23 @@ export function useSocket(): UseSocketReturn {
       }))
       setCities(cityData)
       addLog(`Loaded ${data.benchmark}: ${data.numCities} cities`)
+    })
+
+    socket.on("preview_loaded", (data: { benchmark: string; numCities: number; cities: number[][] }) => {
+      // Transform [x, y] arrays to CityData objects
+      const cityData: CityData[] = data.cities.map((coords, i) => ({
+        id: i,
+        x: coords[0],
+        y: coords[1],
+        name: `City ${i + 1}`,
+      }))
+      setCities(cityData)
+      // Clear previous tour when previewing new problem
+      setBestTour([])
+      setBestDistance(0)
+      setCurrentIteration(0)
+      setConvergenceData([])
+      addLog(`Preview: ${data.benchmark} (${data.numCities} cities)`)
     })
 
     socket.on("progress", (data: { iteration: number; bestDistance: number; bestTour: number[]; progress: number }) => {
@@ -171,6 +189,16 @@ export function useSocket(): UseSocketReturn {
     socketRef.current.emit("solve", payload)
   }, [addLog])
 
+  const preview = useCallback((benchmark: string) => {
+    if (!socketRef.current?.connected) {
+      setError("Not connected to backend")
+      return
+    }
+
+    addLog(`Requesting preview for ${benchmark}`)
+    socketRef.current.emit("preview", { benchmark })
+  }, [addLog])
+
   const stop = useCallback(() => {
     if (socketRef.current?.connected) {
       socketRef.current.emit("stop")
@@ -190,6 +218,7 @@ export function useSocket(): UseSocketReturn {
     convergenceData,
     statusLog,
     solve,
+    preview,
     stop,
   }
 }

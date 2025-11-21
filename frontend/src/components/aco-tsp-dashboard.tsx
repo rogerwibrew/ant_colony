@@ -34,6 +34,7 @@ export function AcoTspDashboard() {
     convergenceData,
     statusLog,
     solve,
+    preview,
   } = useSocket()
 
   const handleSolve = async (config: {
@@ -90,6 +91,7 @@ export function AcoTspDashboard() {
         {/* Top Left - Configuration */}
         <ConfigurationPanel
           onSolve={handleSolve}
+          onPreview={preview}
           isRunning={isRunning}
           statusLog={fullStatusLog}
         />

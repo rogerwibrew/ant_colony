@@ -166,6 +166,39 @@ def handle_solve(data):
         emit('error', {'message': f'Server error: {str(e)}'})
 
 
+@socketio.on('preview')
+def handle_preview(data):
+    """Preview a benchmark (load cities without solving)"""
+    try:
+        benchmark = data.get('benchmark')
+
+        if not benchmark:
+            emit('error', {'message': 'No benchmark specified'})
+            return
+
+        print(f"Received preview request for: {benchmark}")
+
+        # Load benchmark
+        load_result = solver_manager.load_benchmark(benchmark)
+
+        # Send cities data
+        emit('preview_loaded', {
+            'benchmark': benchmark,
+            'numCities': load_result['numCities'],
+            'cities': load_result['cities']
+        })
+
+        print(f"Preview loaded: {benchmark} with {load_result['numCities']} cities")
+
+    except FileNotFoundError as e:
+        print(f"File not found: {e}")
+        emit('error', {'message': f'Benchmark not found: {str(e)}'})
+
+    except Exception as e:
+        print(f"Error in preview: {traceback.format_exc()}")
+        emit('error', {'message': f'Server error: {str(e)}'})
+
+
 @socketio.on('cancel')
 def handle_cancel():
     """Cancel running optimization"""
@@ -210,6 +243,7 @@ if __name__ == '__main__':
     print("  GET  /api/parameters")
     print("\nWebSocket Events:")
     print("  connect -> connected")
+    print("  preview -> preview_loaded (load cities without solving)")
     print("  solve -> loaded, progress (every 10 iter), complete")
     print("  cancel -> cancelled")
     print("  disconnect")

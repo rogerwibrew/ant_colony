@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -21,11 +21,12 @@ interface ConfigurationPanelProps {
     useConvergence: boolean
     convergenceIterations: number
   }) => void
+  onPreview: (benchmark: string) => void
   isRunning: boolean
   statusLog: string[]
 }
 
-export function ConfigurationPanel({ onSolve, isRunning, statusLog }: ConfigurationPanelProps) {
+export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }: ConfigurationPanelProps) {
   const [problem, setProblem] = useState("berlin52.tsp")
   const [method, setMethod] = useState("traditional")
   const [solverType, setSolverType] = useState("single-thread")
@@ -37,6 +38,17 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
   const [numAnts, setNumAnts] = useState(20)
   const [useConvergence, setUseConvergence] = useState(false)
   const [convergenceIterations, setConvergenceIterations] = useState(200)
+
+  // Preview cities when problem changes
+  const handleProblemChange = (newProblem: string) => {
+    setProblem(newProblem)
+    onPreview(newProblem)
+  }
+
+  // Load initial preview on mount
+  useEffect(() => {
+    onPreview(problem)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSolve = () => {
     onSolve({
@@ -63,7 +75,7 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1">
             <Label htmlFor="problem" className="text-xs">Problem</Label>
-            <Select value={problem} onValueChange={setProblem}>
+            <Select value={problem} onValueChange={handleProblemChange}>
               <SelectTrigger id="problem" className="h-8 text-xs">
                 <SelectValue />
               </SelectTrigger>
