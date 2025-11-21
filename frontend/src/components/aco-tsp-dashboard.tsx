@@ -78,7 +78,7 @@ export function AcoTspDashboard() {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100vh-180px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:grid-rows-2 gap-4 h-[calc(100vh-140px)]">
         {/* Top Left - Configuration */}
         <ConfigurationPanel
           onSolve={handleSolve}

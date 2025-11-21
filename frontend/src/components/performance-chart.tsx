@@ -1,17 +1,38 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import dynamic from "next/dynamic"
+import { useMemo } from "react"
+
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false })
 
 interface PerformanceChartProps {
   pathHistory: { iteration: number; length: number }[]
 }
 
 export function PerformanceChart({ pathHistory }: PerformanceChartProps) {
+  const iterations = pathHistory.map((d) => d.iteration)
+  const lengths = pathHistory.map((d) => d.length)
+
+  // Calculate y-axis range dynamically
+  const yAxisRange = useMemo(() => {
+    if (lengths.length === 0) return [0, 100]
+
+    const minLength = Math.min(...lengths)
+    const maxLength = Math.max(...lengths)
+    const range = maxLength - minLength
+    const padding = range * 0.1 // 10% padding
+
+    return [
+      Math.max(0, minLength - padding),
+      maxLength + padding
+    ]
+  }, [lengths])
+
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-xl">Convergence History</CardTitle>
+    <Card className="flex flex-col h-full overflow-hidden">
+      <CardHeader className="py-3">
+        <CardTitle className="text-lg">Convergence History</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 p-4">
         {pathHistory.length === 0 ? (
@@ -19,50 +40,53 @@ export function PerformanceChart({ pathHistory }: PerformanceChartProps) {
             <p>Waiting for simulation data...</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={pathHistory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-              <XAxis
-                dataKey="iteration"
-                stroke="hsl(var(--muted-foreground))"
-                style={{ fontSize: "12px" }}
-                label={{
-                  value: "Iteration",
-                  position: "insideBottom",
-                  offset: -5,
-                  fill: "hsl(var(--muted-foreground))",
-                }}
-              />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                style={{ fontSize: "12px" }}
-                label={{
-                  value: "Path Length",
-                  angle: -90,
-                  position: "insideLeft",
-                  fill: "hsl(var(--muted-foreground))",
-                }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "6px",
-                  fontSize: "12px",
-                }}
-                labelStyle={{ color: "hsl(var(--popover-foreground))" }}
-                itemStyle={{ color: "hsl(var(--primary))" }}
-              />
-              <Line
-                type="monotone"
-                dataKey="length"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={false}
-                name="Best Path Length"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <Plot
+            data={[
+              {
+                x: iterations,
+                y: lengths,
+                type: "scatter",
+                mode: "lines",
+                name: "Best Path Length",
+                line: {
+                  color: "rgb(74, 112, 169)",
+                  width: 2,
+                },
+              },
+            ]}
+            layout={{
+              autosize: true,
+              margin: { l: 60, r: 20, t: 20, b: 50 },
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: "rgba(0,0,0,0)",
+              xaxis: {
+                title: { text: "Iteration", font: { color: "rgb(80, 80, 80)" } },
+                gridcolor: "rgba(180, 177, 168, 0.3)",
+                linecolor: "rgb(180, 177, 168)",
+                tickfont: { color: "rgb(80, 80, 80)" },
+              },
+              yaxis: {
+                title: { text: "Path Length", font: { color: "rgb(80, 80, 80)" } },
+                gridcolor: "rgba(180, 177, 168, 0.3)",
+                linecolor: "rgb(180, 177, 168)",
+                tickfont: { color: "rgb(80, 80, 80)" },
+                range: yAxisRange,
+                autorange: false,
+              },
+              font: {
+                family: "system-ui, sans-serif",
+              },
+              hovermode: "x unified",
+            }}
+            config={{
+              displayModeBar: true,
+              displaylogo: false,
+              modeBarButtonsToRemove: ["lasso2d", "select2d"],
+              responsive: true,
+            }}
+            style={{ width: "100%", height: "100%" }}
+            useResizeHandler={true}
+          />
         )}
       </CardContent>
     </Card>

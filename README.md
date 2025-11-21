@@ -30,7 +30,24 @@ cmake .. && cmake --build .
 ./bin/ant_colony_tsp berlin52.tsp
 ```
 
-### Option 2: Web Interface
+### Option 2: Web Interface (Recommended)
+
+**Using Makefile (easiest):**
+
+```bash
+# Install dependencies (first time only)
+make install
+
+# Start both frontend and backend
+make start
+
+# Open http://localhost:3000
+
+# Stop servers when done
+make stop
+```
+
+**Manual setup:**
 
 ```bash
 # Terminal 1: Start backend
@@ -45,6 +62,19 @@ npm run dev
 
 # Open http://localhost:3000
 ```
+
+**For remote/headless servers:**
+
+Add to your local `~/.ssh/config`:
+```
+Host your-server
+    HostName your-server-address
+    User your-username
+    LocalForward 3000 localhost:3000
+    LocalForward 5000 localhost:5000
+```
+
+Then: `ssh your-server`, run `make start`, and access http://localhost:3000 locally.
 
 ## Components
 
@@ -84,10 +114,13 @@ REST API + WebSocket server for real-time optimization:
 
 React-based web interface featuring:
 - Problem selection from TSPLIB benchmarks
-- Real-time progress visualization
-- Convergence chart
-- City/tour visualization
+- Real-time city/tour visualization with dynamic scaling
+- Live iteration path updates (updates every 10 iterations)
+- Convergence chart with auto-scaling y-axis
+- Best path visualization
 - Parameter configuration (alpha, beta, rho)
+- Clean cream/blue color scheme
+- Responsive layout with 2x2 grid dashboard
 
 ## Build Instructions
 

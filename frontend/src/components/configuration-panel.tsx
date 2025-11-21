@@ -34,70 +34,65 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
   }
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-xl">Configuration</CardTitle>
+    <Card className="flex flex-col h-full overflow-hidden">
+      <CardHeader className="py-3">
+        <CardTitle className="text-lg">Configuration</CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 space-y-4 overflow-y-auto">
-        {/* TSP Problem */}
-        <div className="space-y-2">
-          <Label htmlFor="problem">TSP Problem</Label>
-          <Select value={problem} onValueChange={setProblem}>
-            <SelectTrigger id="problem">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="berlin52.tsp">Berlin52 (52 cities)</SelectItem>
-              <SelectItem value="eil76.tsp">Eil76 (76 cities)</SelectItem>
-              <SelectItem value="kroA100.tsp">KroA100 (100 cities)</SelectItem>
-              <SelectItem value="ch150.tsp">Ch150 (150 cities)</SelectItem>
-              <SelectItem value="tsp225.tsp">TSP225 (225 cities)</SelectItem>
-              <SelectItem value="a280.tsp">A280 (280 cities)</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardContent className="flex-1 space-y-2 overflow-y-auto pt-0">
+        {/* Dropdowns in a grid */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="problem" className="text-xs">Problem</Label>
+            <Select value={problem} onValueChange={setProblem}>
+              <SelectTrigger id="problem" className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="berlin52.tsp">Berlin52</SelectItem>
+                <SelectItem value="eil76.tsp">Eil76</SelectItem>
+                <SelectItem value="kroA100.tsp">KroA100</SelectItem>
+                <SelectItem value="ch150.tsp">Ch150</SelectItem>
+                <SelectItem value="tsp225.tsp">TSP225</SelectItem>
+                <SelectItem value="a280.tsp">A280</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="method" className="text-xs">Method</Label>
+            <Select value={method} onValueChange={setMethod}>
+              <SelectTrigger id="method" className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="traditional">Traditional</SelectItem>
+                <SelectItem value="elitist">Elitist</SelectItem>
+                <SelectItem value="rank-based">Rank-Based</SelectItem>
+                <SelectItem value="max-min">Max-Min</SelectItem>
+                <SelectItem value="acs">ACS</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="solver" className="text-xs">Solver</Label>
+            <Select value={solverType} onValueChange={setSolverType}>
+              <SelectTrigger id="solver" className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single-thread">Single</SelectItem>
+                <SelectItem value="multi-thread">Multi</SelectItem>
+                <SelectItem value="gpu">GPU</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Solution Method */}
-        <div className="space-y-2">
-          <Label htmlFor="method">Solution Method</Label>
-          <Select value={method} onValueChange={setMethod}>
-            <SelectTrigger id="method">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="traditional">Traditional ACO</SelectItem>
-              <SelectItem value="elitist">Elitist Ant System</SelectItem>
-              <SelectItem value="rank-based">Rank-Based AS</SelectItem>
-              <SelectItem value="max-min">Max-Min AS</SelectItem>
-              <SelectItem value="acs">Ant Colony System</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Solver Type */}
-        <div className="space-y-2">
-          <Label htmlFor="solver">Solver Type</Label>
-          <Select value={solverType} onValueChange={setSolverType}>
-            <SelectTrigger id="solver">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="single-thread">Single Thread</SelectItem>
-              <SelectItem value="multi-thread">Multi Thread</SelectItem>
-              <SelectItem value="gpu">GPU Accelerated</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Simulation Constants */}
-        <div className="space-y-4 pt-2">
-          <h3 className="text-sm font-semibold text-foreground">Simulation Constants</h3>
-
-          <div className="space-y-2">
-            <Label htmlFor="rho" className="flex items-center justify-between">
-              <span>Evaporation Rate (ρ)</span>
-              <span className="text-xs text-muted-foreground font-mono">{rho}</span>
-            </Label>
+        {/* Parameters in a grid */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="space-y-1">
+            <Label htmlFor="rho" className="text-xs">ρ (evap)</Label>
             <Input
               id="rho"
               type="number"
@@ -106,14 +101,12 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
               max="1"
               value={rho}
               onChange={(e) => setRho(Number.parseFloat(e.target.value))}
+              className="h-8 text-xs"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="alpha" className="flex items-center justify-between">
-              <span>Pheromone Importance (α)</span>
-              <span className="text-xs text-muted-foreground font-mono">{alpha}</span>
-            </Label>
+          <div className="space-y-1">
+            <Label htmlFor="alpha" className="text-xs">α (pher)</Label>
             <Input
               id="alpha"
               type="number"
@@ -122,14 +115,12 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
               max="5"
               value={alpha}
               onChange={(e) => setAlpha(Number.parseFloat(e.target.value))}
+              className="h-8 text-xs"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="beta" className="flex items-center justify-between">
-              <span>Heuristic Importance (β)</span>
-              <span className="text-xs text-muted-foreground font-mono">{beta}</span>
-            </Label>
+          <div className="space-y-1">
+            <Label htmlFor="beta" className="text-xs">β (heur)</Label>
             <Input
               id="beta"
               type="number"
@@ -138,14 +129,30 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
               max="5"
               value={beta}
               onChange={(e) => setBeta(Number.parseFloat(e.target.value))}
+              className="h-8 text-xs"
             />
           </div>
         </div>
 
-        {/* Console */}
-        <div className="space-y-2 pt-2">
-          <Label>Status Console</Label>
-          <div className="bg-secondary rounded-md p-3 h-32 overflow-y-auto font-mono text-xs space-y-1">
+        {/* Solve Button */}
+        <Button onClick={handleSolve} disabled={isRunning} className="w-full" size="sm">
+          {isRunning ? (
+            <>
+              <Square className="mr-2 h-3 w-3" />
+              Running...
+            </>
+          ) : (
+            <>
+              <Play className="mr-2 h-3 w-3" />
+              Solve
+            </>
+          )}
+        </Button>
+
+        {/* Console - takes remaining space */}
+        <div className="flex-1 min-h-0 space-y-1">
+          <Label className="text-xs">Status Console</Label>
+          <div className="bg-secondary rounded-md p-2 h-full min-h-[60px] overflow-y-auto font-mono text-xs space-y-0.5">
             {statusLog.map((log, i) => (
               <div key={i} className="text-muted-foreground">
                 <span className="text-accent">{">"}</span> {log}
@@ -153,21 +160,6 @@ export function ConfigurationPanel({ onSolve, isRunning, statusLog }: Configurat
             ))}
           </div>
         </div>
-
-        {/* Solve Button */}
-        <Button onClick={handleSolve} disabled={isRunning} className="w-full" size="lg">
-          {isRunning ? (
-            <>
-              <Square className="mr-2 h-4 w-4" />
-              Running...
-            </>
-          ) : (
-            <>
-              <Play className="mr-2 h-4 w-4" />
-              Solve
-            </>
-          )}
-        </Button>
       </CardContent>
     </Card>
   )
