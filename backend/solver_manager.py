@@ -88,11 +88,6 @@ class SolverManager:
         self.start_time = time.time()
         self.is_running = True
 
-        # Track convergence
-        best_distance_tracker = [float('inf')]
-        iterations_without_improvement = [0]
-        actual_iterations = [0]
-
         def progress_callback(iteration, best_distance, best_tour, convergence):
             """Called from C++ every N iterations"""
             if not self.is_running:
@@ -100,60 +95,68 @@ class SolverManager:
 
             elapsed = time.time() - self.start_time
 
-            # Track convergence for early stopping
+            # Calculate progress percentage
             if use_convergence:
-                if best_distance < best_distance_tracker[0]:
-                    best_distance_tracker[0] = best_distance
-                    iterations_without_improvement[0] = 0
-                else:
-                    iterations_without_improvement[0] += 10  # Callback interval
-
-                # Check if we should stop
-                if iterations_without_improvement[0] >= convergence_iterations:
-                    self.is_running = False
-                    actual_iterations[0] = iteration
-                    return
-
-                progress_pct = min(100, (iterations_without_improvement[0] / convergence_iterations) * 100)
+                # For convergence mode, we don't know total iterations, so just show elapsed time
+                progress_pct = 0  # Indeterminate progress
             else:
                 progress_pct = (iteration / iterations) * 100
 
-            actual_iterations[0] = iteration
+            # Convert iteration bests to running global bests for convergence graph
+            global_bests = []
+            running_best = float('inf')
+            for dist in convergence:
+                running_best = min(running_best, dist)
+                global_bests.append(running_best)
 
             # Emit progress update via WebSocket
             self.socketio.emit('progress', {
                 'iteration': iteration,
                 'bestDistance': best_distance,
                 'bestTour': best_tour,
-                'convergenceHistory': convergence,
+                'convergenceHistory': global_bests,
                 'cities': self.cities_coords,
                 'elapsedTime': round(elapsed, 2),
-                'progress': round(progress_pct, 1),
-                'iterationsWithoutImprovement': iterations_without_improvement[0] if use_convergence else None
+                'progress': round(progress_pct, 1)
             })
 
         # Set callback interval (every 10 iterations by default)
         colony.setProgressCallback(progress_callback)
         colony.setCallbackInterval(10)
 
+        # Configure convergence threshold if using convergence mode
+        if use_convergence:
+            colony.setConvergenceThreshold(convergence_iterations)
+
         # Solve (this releases GIL, allowing other Python threads to run)
-        # If using convergence, set high iteration count and rely on callback to stop
-        max_iterations = 10000 if use_convergence else iterations
+        # Pass -1 for convergence mode, which tells C++ to run until no improvement
+        max_iterations = -1 if use_convergence else iterations
         best_tour = colony.solve(max_iterations)
 
         # Send final result
         elapsed = time.time() - self.start_time
         self.is_running = False
 
+        # Get convergence data (iteration bests from C++)
+        iteration_bests = colony.getConvergenceData()
+        total_iterations = len(iteration_bests)
+
+        # Convert iteration bests to running global bests (cumulative minimum)
+        # This ensures the convergence graph always shows non-increasing values
+        global_bests = []
+        running_best = float('inf')
+        for dist in iteration_bests:
+            running_best = min(running_best, dist)
+            global_bests.append(running_best)
+
         return {
             'bestDistance': best_tour.getDistance(),
             'bestTour': best_tour.getSequence(),
-            'convergenceHistory': colony.getConvergenceData(),
+            'convergenceHistory': global_bests,
             'cities': self.cities_coords,
             'elapsedTime': round(elapsed, 2),
-            'totalIterations': actual_iterations[0] if use_convergence else iterations,
-            'benchmark': self.benchmark_name,
-            'stoppedByConvergence': use_convergence and iterations_without_improvement[0] >= convergence_iterations
+            'totalIterations': total_iterations,
+            'benchmark': self.benchmark_name
         }
 
     def stop(self):
