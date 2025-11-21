@@ -10,7 +10,7 @@ C++17 Ant Colony Optimization (ACO) implementation for Travelling Salesman Probl
 
 ## Roadmap / Planned Tasks
 
-1. **Fix UI** - Improve the web interface
+1. **Improve UI** - 🚧 In progress: Preview feature, convergence stopping, ant controls, visualization improvements
 2. **Multi-core CPU support** - Integrate parallel processing using multiple CPU cores (separate branch)
 3. **GPU acceleration** - Integrate GPU operations for performance
 4. **Additional solution methods** - Add elite ant and other ACO variants
@@ -593,7 +593,31 @@ Convergence Summary:
 
 ## Web Interface
 
-The project includes a full-stack web interface for interactive TSP solving.
+The project includes a full-stack web interface for interactive TSP solving with real-time visualization and advanced controls.
+
+### Features
+
+**Problem Preview:**
+- Cities are automatically loaded and displayed when selecting a TSP problem from dropdown
+- Preview appears in top-right visualization before running solver
+- Allows visual inspection of problem layout before optimization
+
+**Solver Controls:**
+- **Iterations:** Set max iterations (10-10,000) or use convergence-based stopping
+- **Convergence Mode:** Stop automatically when no improvement for N iterations (default: 200)
+- **Number of Ants:** Auto-calculate (1-2 per city) or specify custom value
+- **ACO Parameters:** Adjustable α (pheromone), β (heuristic), ρ (evaporation)
+
+**Visualizations:**
+- **City Positions:** Real-time display with uniform viewport-based sizing
+- **Current Path:** Live tour updates during optimization
+- **Convergence Graph:** Monotonically decreasing plot of best solution over time
+- **Status Console:** Real-time solver status and progress messages
+
+**Performance:**
+- WebSocket-based real-time updates (every 10 iterations)
+- C++ solver releases GIL for concurrent Python operations
+- Progress tracking with elapsed time and iteration count
 
 ### Frontend (Next.js)
 
@@ -607,7 +631,8 @@ Located in `frontend/`, built with:
 **Components:**
 - `aco-tsp-dashboard.tsx` - Main dashboard layout
 - `configuration-panel.tsx` - Problem selection and parameter controls
-- `city-visualization.tsx` - City/tour visualization
+- `city-visualization.tsx` - City/tour visualization with preview
+- `path-display.tsx` - Current iteration path display
 - `performance-chart.tsx` - Convergence chart
 - `useSocket.ts` - WebSocket hook for backend communication
 
@@ -621,9 +646,17 @@ npm run dev  # http://localhost:3000
 ### Backend (Flask)
 
 Located in `backend/`, provides:
-- REST API for benchmark listing
+- REST API for benchmark listing and parameter defaults
 - WebSocket server for real-time optimization progress
+- Preview endpoint for loading cities without solving
 - Integration with C++ solver via pybind11
+- Convergence tracking and early stopping logic
+
+**WebSocket Events:**
+- `connect` → `connected`
+- `preview` → `preview_loaded` (load cities without solving)
+- `solve` → `loaded`, `progress` (every 10 iter), `complete`
+- `cancel` → `cancelled`
 
 **Running:**
 ```bash
@@ -639,8 +672,10 @@ python app.py  # http://localhost:5000
 - 2-opt/3-opt local search
 - Parallel ant execution
 - Adaptive parameters (dynamic alpha, beta, rho)
-- Improved web UI (better visualization, more controls)
 - Export results to file (CSV, JSON)
+- Additional benchmark problems in web UI dropdown
+- Path animation playback
+- Comparison mode (run multiple configurations side-by-side)
 
 ## References
 

@@ -54,6 +54,7 @@ REST Endpoints:
 
 WebSocket Events:
   connect -> connected
+  preview -> preview_loaded (load cities without solving)
   solve -> loaded, progress (every 10 iter), complete
   cancel -> cancelled
   disconnect
@@ -164,6 +165,17 @@ Get default ACO parameters.
 
 #### Client → Server
 
+##### `preview`
+
+Load cities for a TSP problem without solving (preview mode).
+
+**Payload:**
+```json
+{
+  "benchmark": "berlin52.tsp"
+}
+```
+
 ##### `solve`
 
 Start solving a TSP problem.
@@ -173,12 +185,14 @@ Start solving a TSP problem.
 {
   "benchmark": "berlin52.tsp",
   "params": {
-    "numAnts": 20,
+    "numAnts": 20,          // null for auto-calculate (1-2 per city)
     "iterations": 100,
     "alpha": 1.0,
     "beta": 2.0,
     "rho": 0.5,
-    "Q": 100.0
+    "Q": 100.0,
+    "useConvergence": false,  // true to use convergence mode
+    "convergenceIterations": 200  // stop after N iterations without improvement
   }
 }
 ```
@@ -203,9 +217,22 @@ Sent when client connects.
 }
 ```
 
+##### `preview_loaded`
+
+Sent after preview request completes (cities loaded without solving).
+
+**Payload:**
+```json
+{
+  "benchmark": "berlin52.tsp",
+  "numCities": 52,
+  "cities": [[565.0, 575.0], [25.0, 185.0], ...]
+}
+```
+
 ##### `loaded`
 
-Sent after benchmark is loaded successfully.
+Sent after benchmark is loaded successfully for solving.
 
 **Payload:**
 ```json
