@@ -49,8 +49,9 @@ export function CityVisualization({ cities, bestPath }: CityVisualizationProps) 
   // Calculate circle radius based on coordinate scale
   const circleRadius = useMemo(() => {
     const maxDim = Math.max(viewBoxData.width, viewBoxData.height)
-    // Scale circle size to ~0.5% of the larger dimension
-    return Math.max(3, maxDim * 0.005)
+    // Scale circle size to ~0.5% of the larger dimension, but cap at reasonable max
+    const scaled = maxDim * 0.005
+    return Math.max(3, Math.min(scaled, 8))  // Min 3, max 8
   }, [viewBoxData])
 
   return (
