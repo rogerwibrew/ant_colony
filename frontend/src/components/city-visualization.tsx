@@ -46,12 +46,12 @@ export function CityVisualization({ cities, bestPath }: CityVisualizationProps) 
     return Math.ceil(maxDim / 10)
   }, [viewBoxData])
 
-  // Calculate circle radius based on coordinate scale
+  // Calculate circle radius as a fixed percentage of viewport
+  // This ensures consistent sizing regardless of coordinate space
   const circleRadius = useMemo(() => {
+    // Use a fixed percentage of the viewBox dimension
     const maxDim = Math.max(viewBoxData.width, viewBoxData.height)
-    // Scale circle size to ~0.5% of the larger dimension, but cap at reasonable max
-    const scaled = maxDim * 0.005
-    return Math.max(3, Math.min(scaled, 8))  // Min 3, max 8
+    return maxDim * 0.008  // 0.8% of viewport
   }, [viewBoxData])
 
   return (
@@ -86,18 +86,6 @@ export function CityVisualization({ cities, bestPath }: CityVisualizationProps) 
             width={viewBoxData.width}
             height={viewBoxData.height}
             fill="url(#grid)"
-          />
-
-          {/* Debug: ViewBox border */}
-          <rect
-            x={viewBoxData.minX}
-            y={viewBoxData.minY}
-            width={viewBoxData.width}
-            height={viewBoxData.height}
-            fill="none"
-            stroke="red"
-            strokeWidth={circleRadius * 0.2}
-            strokeDasharray={`${circleRadius * 2} ${circleRadius}`}
           />
 
           {/* Draw paths if available */}

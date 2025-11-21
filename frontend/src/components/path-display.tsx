@@ -47,10 +47,12 @@ export function PathDisplay({ cities, bestPath, bestPathLength, iteration }: Pat
     return Math.ceil(maxDim / 10)
   }, [viewBoxData])
 
-  // Calculate circle radius based on coordinate scale
+  // Calculate circle radius as a fixed percentage of viewport
+  // This ensures consistent sizing regardless of coordinate space
   const circleRadius = useMemo(() => {
+    // Use a fixed percentage of the viewBox dimension
     const maxDim = Math.max(viewBoxData.width, viewBoxData.height)
-    return Math.max(3, maxDim * 0.005)
+    return maxDim * 0.008  // 0.8% of viewport
   }, [viewBoxData])
 
   return (
