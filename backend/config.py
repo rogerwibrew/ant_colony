@@ -11,7 +11,7 @@ class Config:
     DEBUG = os.environ.get('FLASK_DEBUG', 'True').lower() == 'true'
 
     # CORS settings
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:3001,http://localhost:3002').split(',')
 
     # WebSocket settings
     SOCKETIO_CORS_ALLOWED_ORIGINS = CORS_ORIGINS

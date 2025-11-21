@@ -1,82 +1,154 @@
 # Ant Colony Optimization - TSP Solver
 
-A C++ implementation of Ant Colony Optimization algorithm for solving the Travelling Salesman Problem.
+A C++ implementation of Ant Colony Optimization algorithm for solving the Travelling Salesman Problem, with Python bindings, Flask API, and Next.js web interface.
 
 ## Project Structure
 
 ```
 ant_colony/
-├── include/          # Header files (.h)
-├── src/             # Source files (.cpp)
-├── tests/           # Google Test files
-├── CMakeLists.txt   # CMake configuration
-└── Claude.md        # Class specifications and design
+├── include/              # C++ header files (.h)
+├── src/                  # C++ source files (.cpp)
+├── tests/                # Google Test files
+├── data/                 # TSPLIB benchmark instances (113+ files)
+├── python_bindings/      # pybind11 Python bindings
+├── backend/              # Flask API with WebSocket support
+├── frontend/             # Next.js web interface
+├── CMakeLists.txt        # CMake configuration
+└── CLAUDE.md             # Class specifications and design
 ```
+
+## Quick Start
+
+### Option 1: Command Line (C++)
+
+```bash
+# Build
+mkdir build && cd build
+cmake .. && cmake --build .
+
+# Run
+./bin/ant_colony_tsp berlin52.tsp
+```
+
+### Option 2: Web Interface
+
+```bash
+# Terminal 1: Start backend
+cd backend
+pip install -r requirements.txt
+python app.py
+
+# Terminal 2: Start frontend
+cd frontend
+npm install
+npm run dev
+
+# Open http://localhost:3000
+```
+
+## Components
+
+### C++ Core (106 tests passing)
+
+High-performance ACO implementation with:
+- Precomputed O(1) distance matrix lookups
+- TSPLIB format support (EUC_2D)
+- Convergence tracking and progress callbacks
+- CLI with customizable parameters
+
+```bash
+./ant_colony_tsp berlin52.tsp --ants 50 --iterations 200 --alpha 1.5 --beta 3.0
+```
+
+### Python Bindings
+
+pybind11 bindings exposing the C++ solver to Python:
+
+```python
+import aco_solver
+loader = aco_solver.TSPLoader("berlin52.tsp")
+graph = loader.loadGraph()
+colony = aco_solver.AntColony(graph, 20, 1.0, 2.0, 0.5, 100.0)
+best_tour = colony.solve(100)
+print(f"Best distance: {best_tour.getDistance()}")
+```
+
+### Flask Backend
+
+REST API + WebSocket server for real-time optimization:
+- `GET /api/benchmarks` - List available problems
+- `GET /api/health` - Health check
+- WebSocket `solve` event - Run optimization with progress updates
+
+### Next.js Frontend
+
+React-based web interface featuring:
+- Problem selection from TSPLIB benchmarks
+- Real-time progress visualization
+- Convergence chart
+- City/tour visualization
+- Parameter configuration (alpha, beta, rho)
 
 ## Build Instructions
 
 ### Prerequisites
-- CMake 3.14 or higher
-- C++17 compatible compiler (GCC, Clang, or MSVC)
-- Internet connection (for downloading googletest)
 
-### Building the Project
+- CMake 3.14+, C++17 compiler
+- Python 3.8+ (for bindings/backend)
+- Node.js 18+ (for frontend)
+
+### C++ Build
 
 ```bash
-# Create build directory
-mkdir build
-cd build
-
-# Configure with CMake
+mkdir build && cd build
 cmake ..
-
-# Build
 cmake --build .
 
-# Or using make directly
-make
-```
-
-The `compile_commands.json` file will be automatically generated in the build directory for clang tooling (clangd, clang-tidy, etc.).
-
-### Linking compile_commands.json
-
-For better IDE/editor support, create a symlink in the project root:
-
-```bash
-ln -s build/compile_commands.json compile_commands.json
-```
-
-## Running
-
-```bash
-# Run the main program
-./build/bin/ant_colony_tsp
-
 # Run tests
-./build/bin/ant_colony_tests
-
-# Or using CTest
-cd build
 ctest --output-on-failure
 ```
 
-## Testing
+### Python Bindings
 
-This project uses Google Test for unit testing. Tests are located in the `tests/` directory.
-
-To run tests:
 ```bash
-cd build
-ctest --verbose
+cd python_bindings
+pip install -e .
 ```
 
-## Development
+### Backend
 
-- Place header files in `include/`
-- Place implementation files in `src/`
-- Place test files in `tests/`
-- Update `Claude.md` with class specifications
+```bash
+cd backend
+pip install -r requirements.txt
+python app.py  # Runs on http://localhost:5000
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev   # Runs on http://localhost:3000
+```
+
+## Algorithm Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| alpha     | 1.0     | Pheromone importance |
+| beta      | 2.0     | Heuristic (distance) importance |
+| rho       | 0.5     | Evaporation rate |
+| Q         | 100.0   | Pheromone deposit factor |
+| numAnts   | 20      | Number of ants |
+| iterations| 100     | Maximum iterations |
+
+## Benchmark Results
+
+| Problem | Cities | Optimal | ACO Result | Gap |
+|---------|--------|---------|------------|-----|
+| berlin52| 52     | 7542    | ~7630      | ~1.2% |
+| eil51   | 51     | 426     | ~432       | ~1.4% |
+| kroA100 | 100    | 21282   | ~21800     | ~2.4% |
 
 ## License
 

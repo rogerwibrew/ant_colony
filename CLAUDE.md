@@ -577,6 +577,47 @@ Convergence Summary:
 
 5. **Local Search:** No 2-opt or 3-opt local search improvement. Adding this would significantly improve solution quality.
 
+## Web Interface
+
+The project includes a full-stack web interface for interactive TSP solving.
+
+### Frontend (Next.js)
+
+Located in `frontend/`, built with:
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS
+- Recharts (convergence visualization)
+- socket.io-client (real-time updates)
+
+**Components:**
+- `aco-tsp-dashboard.tsx` - Main dashboard layout
+- `configuration-panel.tsx` - Problem selection and parameter controls
+- `city-visualization.tsx` - City/tour visualization
+- `performance-chart.tsx` - Convergence chart
+- `useSocket.ts` - WebSocket hook for backend communication
+
+**Running:**
+```bash
+cd frontend
+npm install
+npm run dev  # http://localhost:3000
+```
+
+### Backend (Flask)
+
+Located in `backend/`, provides:
+- REST API for benchmark listing
+- WebSocket server for real-time optimization progress
+- Integration with C++ solver via pybind11
+
+**Running:**
+```bash
+cd backend
+pip install -r requirements.txt
+python app.py  # http://localhost:5000
+```
+
 ## Future Enhancements
 
 - Support for ATT, GEO, and EXPLICIT edge weight types
@@ -584,7 +625,7 @@ Convergence Summary:
 - 2-opt/3-opt local search
 - Parallel ant execution
 - Adaptive parameters (dynamic alpha, beta, rho)
-- GUI visualization of tours and convergence
+- Improved web UI (better visualization, more controls)
 - Export results to file (CSV, JSON)
 
 ## References
