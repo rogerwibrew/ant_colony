@@ -18,7 +18,7 @@ C++17 Ant Colony Optimization (ACO) implementation for Travelling Salesman Probl
 
 ## Essential Commands
 
-### Build
+### Build C++ Core
 
 ```bash
 # Initial setup
@@ -38,6 +38,38 @@ ln -s cpp/build/compile_commands.json compile_commands.json
 ```
 
 **Note:** The project includes a `.clangd` configuration file for proper C++17 support and strict include checking.
+
+### Build Python Bindings
+
+```bash
+cd python_bindings
+python setup.py build_ext --inplace
+# Creates aco_solver.cpython-*.so
+
+# Test bindings
+python test_bindings.py
+```
+
+### Web Interface Quick Start
+
+```bash
+# Install dependencies (first time only)
+make install
+
+# Start both frontend and backend servers
+make start
+# Frontend: http://localhost:3000
+# Backend:  http://localhost:5000
+
+# View logs
+tail -f backend.log
+tail -f frontend.log
+
+# Stop servers
+make stop
+```
+
+**Note:** Makefile creates `*.pid` and `*.log` files in project root (gitignored).
 
 ### Test
 
@@ -137,12 +169,24 @@ cpp/              - C++ core implementation
 data/             - TSPLIB benchmark instances (113+ files, shared by all components)
   ├── berlin52.tsp, ulysses16.tsp, att48.tsp, eil51.tsp
   └── ... (many more EUC_2D problems)
-python_bindings/  - pybind11 Python bindings
+python_bindings/  - pybind11 Python bindings to C++ solver
+  ├── bindings.cpp       - pybind11 wrapper code
+  ├── setup.py           - Build configuration
+  ├── test_bindings.py   - Python test suite
+  └── aco_solver.*.so    - Compiled Python module (gitignored)
 backend/          - Flask API with WebSocket support
+  ├── app.py             - Main Flask application
+  └── requirements.txt   - Python dependencies
 frontend/         - Next.js web interface
+  ├── app/               - Next.js App Router pages
+  ├── components/        - React components
+  └── package.json       - npm dependencies
+Makefile          - Quick commands for web development (start/stop/install)
 ```
 
-**Note:** `compile_commands.json` in the root is a symlink to `cpp/build/compile_commands.json` (gitignored but useful for LSP).
+**Notes:**
+- `compile_commands.json` in root is a symlink to `cpp/build/compile_commands.json` (gitignored but useful for LSP)
+- Makefile creates `*.pid` and `*.log` files in root when running web servers (gitignored)
 
 ## Adding New Classes
 
@@ -399,8 +443,10 @@ Default values for ACO:
 - `void constructSolutions()` - All ants build tours
 - `void updatePheromones()` - Evaporate and deposit pheromones
 - `Tour solve(int maxIterations)` - Run algorithm for specified iterations
+- `Tour solve(int maxIterations, int convergenceIterations)` - Run with early stopping if no improvement for N iterations
 - `const Tour& getBestTour() const` - Get best solution found
 - `const std::vector<double>& getConvergenceData() const` - Get iteration history
+- `void setProgressCallback(callback, interval)` - Set callback function for progress updates (Python bindings)
 
 **Dependencies:** Graph, PheromoneMatrix, Ant, Tour
 
@@ -410,6 +456,7 @@ Default values for ACO:
 - Falls back to τ₀ = 1.0 if nearest neighbor tour length is zero or invalid
 - Can implement different pheromone update strategies (ant-cycle, ant-quantity, etc.)
 - Consider elitist strategy (only best ant deposits pheromones)
+- **Convergence-based stopping:** If `convergenceIterations` specified, solver stops early when no improvement for N iterations
 
 ---
 
@@ -664,6 +711,45 @@ cd backend
 pip install -r requirements.txt
 python app.py  # http://localhost:5000
 ```
+
+## Python Bindings
+
+The project includes pybind11 bindings that expose the C++ solver to Python with near-native performance.
+
+### Quick Example
+
+```python
+import aco_solver
+
+# Load problem
+loader = aco_solver.TSPLoader("berlin52.tsp")
+graph = loader.loadGraph()
+
+# Create and run solver
+colony = aco_solver.AntColony(graph, numAnts=20, alpha=1.0, beta=2.0, rho=0.5, Q=100.0)
+best_tour = colony.solve(100)
+print(f"Best distance: {best_tour.getDistance():.2f}")
+```
+
+### Progress Callbacks
+
+```python
+def progress_callback(iteration, best_distance, best_tour, convergence):
+    print(f"Iteration {iteration}: Best = {best_distance:.2f}")
+
+colony.setProgressCallback(progress_callback)
+colony.setCallbackInterval(10)  # Every 10 iterations
+best_tour = colony.solve(100)
+```
+
+**Key Features:**
+- Releases GIL during C++ computation (allows concurrent Python operations)
+- Real-time progress callbacks from C++
+- 10-15% overhead vs pure C++ CLI
+- All C++ classes exposed: City, Graph, Tour, TSPLoader, AntColony
+- Automatic path searching for TSPLIB files
+
+**Testing:** Run `python test_bindings.py` in `python_bindings/` directory
 
 ## Future Enhancements
 
