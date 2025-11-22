@@ -1,20 +1,29 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when
+working with code in this repository.
 
 ## Project Overview
 
-C++17 Ant Colony Optimization (ACO) implementation for Travelling Salesman Problem using CMake and Google Test.
+C++17 Ant Colony Optimization (ACO) implementation for Travelling
+Salesman Problem using CMake and Google Test.
 
-**Current Status:** ✅ **FULLY IMPLEMENTED** - 106 tests passing. All core classes complete and working. Production-ready ACO solver with CLI interface and TSPLIB format support.
+**Current Status:** ✅ **FULLY IMPLEMENTED** - 106 tests passing.
+All core classes complete and working. Production-ready ACO solver
+with CLI interface and TSPLIB format support.
 
 ## Roadmap / Planned Tasks
 
-1. **Improve UI** - 🚧 In progress: Preview feature, convergence stopping, ant controls, visualization improvements
-2. **Multi-core CPU support** - Integrate parallel processing using multiple CPU cores (separate branch)
+1. **Improve UI** - 🚧 In progress: Preview feature, convergence
+   stopping, ant controls, visualization improvements
+2. **Multi-core CPU support** - Integrate parallel processing using
+   multiple CPU cores (separate branch)
 3. **GPU acceleration** - Integrate GPU operations for performance
-4. **Additional solution methods** - Add elite ant and other ACO variants
-5. **Full TSPLIB95 support** - Add all TSPLIB95 problems to the potential list, including fixing incompatible files in `uncompatibleData/`
+4. **Additional solution methods** - Add elite ant and other ACO
+   variants
+5. **Full TSPLIB95 support** - Add all TSPLIB95 problems to the
+   potential list, including fixing incompatible files in
+   `uncompatibleData/`
 
 ## Essential Commands
 
@@ -37,7 +46,8 @@ cd cpp/build && rm -rf * && cmake .. && cmake --build .
 ln -s cpp/build/compile_commands.json compile_commands.json
 ```
 
-**Note:** The project includes a `.clangd` configuration file for proper C++17 support and strict include checking.
+**Note:** The project includes a `.clangd` configuration file for
+proper C++17 support and strict include checking.
 
 ### Build Python Bindings
 
@@ -69,7 +79,8 @@ tail -f frontend.log
 make stop
 ```
 
-**Note:** Makefile creates `*.pid` and `*.log` files in project root (gitignored).
+**Note:** Makefile creates `*.pid` and `*.log` files in project root
+(gitignored).
 
 ### Test
 
@@ -110,24 +121,33 @@ cd cpp/build/bin
 cd cpp/build && ./bin/ant_colony_tsp berlin52.tsp
 ```
 
-**Note:** TSPLoader automatically searches for files in `data/`, `../data/`, and `../../data/`, so you can run from any directory without specifying the full path.
+**Note:** TSPLoader automatically searches for files in `data/`,
+`../data/`, and `../../data/`, so you can run from any directory
+without specifying the full path.
 
 ## Architecture Overview
 
 **Implementation Status:**
 
-- ✅ **City** (7 tests) - Represents cities with coordinates and distance calculation
-- ✅ **Graph** (8 tests) - Stores cities + precomputed O(1) distance matrix
-- ✅ **TSPLoader** (10 tests) - Loads TSP files (coordinate, matrix, and TSPLIB formats)
+- ✅ **City** (7 tests) - Represents cities with coordinates and
+  distance calculation
+- ✅ **Graph** (8 tests) - Stores cities + precomputed O(1) distance
+  matrix
+- ✅ **TSPLoader** (10 tests) - Loads TSP files (coordinate, matrix,
+  and TSPLIB formats)
 - ✅ **Tour** (16 tests) - Solution representation with validation
-- ✅ **PheromoneMatrix** (20 tests) - Pheromone tracking with evaporation and deposit
-- ✅ **Ant** (21 tests) - Solution construction agent with probabilistic city selection
-- ✅ **AntColony** (23 tests) - Main algorithm coordinator with convergence tracking
-- ✅ **main.cpp** - Full CLI with parameter customization and formatted output
+- ✅ **PheromoneMatrix** (20 tests) - Pheromone tracking with
+  evaporation and deposit
+- ✅ **Ant** (21 tests) - Solution construction agent with
+  probabilistic city selection
+- ✅ **AntColony** (23 tests) - Main algorithm coordinator with
+  convergence tracking
+- ✅ **main.cpp** - Full CLI with parameter customization and
+  formatted output
 
 **Execution Flow:**
 
-```
+```text
 Load TSP Instance → Initialize Colony → For each iteration:
   → Ants construct tours (probabilistic city selection)
   → Update pheromones (evaporation + deposit based on tour quality)
@@ -137,17 +157,22 @@ Load TSP Instance → Initialize Colony → For each iteration:
 
 **Critical Design Details:**
 
-- Distance matrix is precomputed once in Graph constructor (O(n²)) for O(1) lookups
-- Matrix stored as `std::vector<std::vector<double>>` (runtime-sized, symmetric)
-- Initial pheromone value uses **τ₀ = m / C^nn** formula (m = number of ants, C^nn = nearest neighbor tour length)
-- Nearest neighbor heuristic provides problem-adaptive initialization
-- ACO flow: Ants build tours → Update pheromones → Track best → Repeat
+- Distance matrix is precomputed once in Graph constructor (O(n²))
+  for O(1) lookups
+- Matrix stored as `std::vector<std::vector<double>>`
+  (runtime-sized, symmetric)
+- Initial pheromone value uses **τ₀ = m / C^nn** formula
+  (m = number of ants, C^nn = nearest neighbor tour length)
+- Nearest neighbor heuristic provides problem-adaptive
+  initialization
+- ACO flow: Ants build tours → Update pheromones → Track best →
+  Repeat
 - Member variables use trailing underscore: `id_`, `cities_`
 - Single-arg constructors are `explicit`
 
 ## File Organization
 
-```
+```text
 cpp/              - C++ core implementation
   ├── include/    - Header files (.h)
   │   ├── City.h, Graph.h, Tour.h
@@ -162,7 +187,8 @@ cpp/              - C++ core implementation
   │   ├── City_test.cpp, Graph_test.cpp, Tour_test.cpp
   │   ├── PheromoneMatrix_test.cpp, Ant_test.cpp, AntColony_test.cpp
   │   ├── TSPLoader_test.cpp, example_test.cpp
-  │   └── data/   - Test input files (simple_5.txt, triangle_3.txt, matrix_4.txt, invalid.txt)
+  │   └── data/   - Test input files (simple_5.txt, triangle_3.txt, matrix_4.txt,
+          invalid.txt)
   ├── build/      - CMake build directory (gitignored)
   │   └── bin/    - Compiled executables (ant_colony_tsp, ant_colony_tests)
   └── CMakeLists.txt
@@ -185,8 +211,11 @@ Makefile          - Quick commands for web development (start/stop/install)
 ```
 
 **Notes:**
-- `compile_commands.json` in root is a symlink to `cpp/build/compile_commands.json` (gitignored but useful for LSP)
-- Makefile creates `*.pid` and `*.log` files in root when running web servers (gitignored)
+
+- `compile_commands.json` in root is a symlink to
+  `cpp/build/compile_commands.json` (gitignored but useful for LSP)
+- Makefile creates `*.pid` and `*.log` files in root when running
+  web servers (gitignored)
 
 ## Adding New Classes
 
@@ -198,7 +227,7 @@ Makefile          - Quick commands for web development (start/stop/install)
 
 **Simple Coordinate Format:**
 
-```
+```text
 5                    # Number of cities
 0 10.0 20.0         # City ID, X coordinate, Y coordinate
 1 15.0 25.0
@@ -209,7 +238,7 @@ Makefile          - Quick commands for web development (start/stop/install)
 
 **Simple Distance Matrix Format:**
 
-```
+```text
 4                    # Number of cities
 0.0 5.0 10.0 15.0   # n×n distance matrix
 5.0 0.0 8.0 12.0
@@ -219,7 +248,7 @@ Makefile          - Quick commands for web development (start/stop/install)
 
 **TSPLIB Format (113+ benchmark files in data/):**
 
-```
+```text
 NAME: berlin52
 TYPE: TSP
 COMMENT: 52 locations in Berlin
@@ -233,6 +262,7 @@ EOF
 ```
 
 **Supported EDGE_WEIGHT_TYPE:**
+
 - ✅ **EUC_2D** (Euclidean 2D) - Most TSPLIB files
 - ❌ ATT (pseudo-Euclidean) - Not yet supported
 - ❌ GEO (geographical coordinates) - Not yet supported
@@ -258,7 +288,8 @@ Default values for ACO:
 - `numAnts = 20-50`
 - `iterations = 100-1000`
 
-**Selection probability:** `p[i][j] = (pheromone^alpha * (1/distance)^beta) / sum(unvisited)`
+**Selection probability:**
+`p[i][j] = (pheromone^alpha * (1/distance)^beta) / sum(unvisited)`
 
 **Pheromone update strategies:**
 
@@ -283,7 +314,8 @@ Default values for ACO:
 **Methods:**
 
 - `City(int id, double x, double y)` - Constructor
-- `double distanceTo(const City& other) const` - Calculate Euclidean distance to another city
+- `double distanceTo(const City& other) const` - Calculate Euclidean
+  distance to another city
 - `int getId() const` - Getter for city ID
 - `double getX() const` - Getter for X coordinate
 - `double getY() const` - Getter for Y coordinate
@@ -299,32 +331,39 @@ Default values for ACO:
 
 ### Class: Graph
 
-**Purpose:** Stores the complete TSP problem instance including all cities and precomputed distances.
+**Purpose:** Stores the complete TSP problem instance including all
+cities and precomputed distances.
 
 **Member Variables:**
 
 - `std::vector<City> cities_` - All cities in the problem
-- `std::vector<std::vector<double>> distanceMatrix_` - Precomputed distances between all city pairs
+- `std::vector<std::vector<double>> distanceMatrix_` - Precomputed
+  distances between all city pairs
 - `int numCities_` - Number of cities
 
 **Methods:**
 
-- `Graph(const std::vector<City>& cities)` - Constructor that builds distance matrix
+- `Graph(const std::vector<City>& cities)` - Constructor that builds
+  distance matrix
 - `Graph()` - Default constructor (empty graph for error handling)
-- `double getDistance(int cityA, int cityB) const` - Get distance between two cities (O(1))
+- `double getDistance(int cityA, int cityB) const` - Get distance
+  between two cities (O(1))
 - `int getNumCities() const` - Get total number of cities
 - `const City& getCity(int index) const` - Get city by index
 - `const std::vector<City>& getCities() const` - Get all cities
 - `bool isValid() const` - Check if graph has cities
-- `double nearestNeighborTourLength(int startCity = 0) const` - Calculate tour length using greedy nearest neighbor heuristic
+- `double nearestNeighborTourLength(int startCity = 0) const` -
+  Calculate tour length using greedy nearest neighbor heuristic
 
 **Dependencies:** City
 
 **Notes:**
 
 - Distance matrix is symmetric for Euclidean TSP
-- Matrix computed once at construction for efficiency (O(n²) construction, O(1) lookup)
-- Nearest neighbor heuristic used to compute initial pheromone value: τ₀ = m / C^nn
+- Matrix computed once at construction for efficiency
+  (O(n²) construction, O(1) lookup)
+- Nearest neighbor heuristic used to compute initial pheromone value:
+  τ₀ = m / C^nn
 
 ---
 
@@ -341,8 +380,10 @@ Default values for ACO:
 **Methods:**
 
 - `Tour()` - Default constructor
-- `Tour(const std::vector<int>& sequence, double distance)` - Constructor with values
-- `void setTour(const std::vector<int>& sequence, double distance)` - Set tour data
+- `Tour(const std::vector<int>& sequence, double distance)` -
+  Constructor with values
+- `void setTour(const std::vector<int>& sequence, double distance)` -
+  Set tour data
 - `double getDistance() const` - Get tour length
 - `const std::vector<int>& getSequence() const` - Get city sequence
 - `bool validate(int numCities) const` - Verify tour validity
@@ -362,11 +403,13 @@ Default values for ACO:
 
 **Member Variables:**
 
-- `std::vector<std::vector<double>> pheromones_` - Pheromone levels between city pairs
+- `std::vector<std::vector<double>> pheromones_` - Pheromone levels
+  between city pairs
 - `int numCities_` - Number of cities
 - `double initialPheromone_` - Initial pheromone level
 - `double minPheromone_` - Minimum allowed pheromone level
-- `double maxPheromone_` - Maximum allowed pheromone level (for MAX-MIN Ant System)
+- `double maxPheromone_` - Maximum allowed pheromone level
+  (for MAX-MIN Ant System)
 
 **Methods:**
 
@@ -374,9 +417,12 @@ Default values for ACO:
 - `void initialize(double value)` - Reset all pheromones to initial value
 - `double getPheromone(int cityA, int cityB) const` - Get pheromone level
 - `void setPheromone(int cityA, int cityB, double value)` - Set pheromone level
-- `void evaporate(double rho)` - Apply evaporation to all edges: `pheromone *= (1 - rho)`
-- `void depositPheromone(int cityA, int cityB, double amount)` - Add pheromone to edge
-- `void clampPheromones()` - Enforce min/max bounds (optional, for MMAS variant)
+- `void evaporate(double rho)` - Apply evaporation to all edges:
+  `pheromone *= (1 - rho)`
+- `void depositPheromone(int cityA, int cityB, double amount)` - Add
+  pheromone to edge
+- `void clampPheromones()` - Enforce min/max bounds (optional, for
+  MMAS variant)
 
 **Dependencies:** None
 
@@ -389,7 +435,8 @@ Default values for ACO:
 
 ### Class: Ant
 
-**Purpose:** Individual ant agent that constructs a tour using pheromone and heuristic information.
+**Purpose:** Individual ant agent that constructs a tour using
+pheromone and heuristic information.
 
 **Member Variables:**
 
@@ -402,17 +449,21 @@ Default values for ACO:
 
 - `Ant(int startCity, int numCities)` - Constructor
 - `void reset(int startCity)` - Reset ant to start a new tour
-- `int selectNextCity(const Graph& graph, const PheromoneMatrix& pheromones, double alpha, double beta)` - Choose next city probabilistically
+- `int selectNextCity(const Graph& graph,
+  const PheromoneMatrix& pheromones, double alpha, double beta)` -
+  Choose next city probabilistically
 - `void visitCity(int city, const Graph& graph)` - Add city to tour
 - `bool hasVisitedAll() const` - Check if tour is complete
 - `Tour completeTour(const Graph& graph)` - Finalize and return the tour
-- `double calculateTourLength(const Graph& graph) const` - Calculate total tour distance
+- `double calculateTourLength(const Graph& graph) const` - Calculate
+  total tour distance
 
 **Dependencies:** Graph, PheromoneMatrix, Tour
 
 **Notes:**
 
-- Selection probability: `p_ij = (pheromone^alpha * (1/distance)^beta) / sum(all unvisited)`
+- Selection probability:
+  `p_ij = (pheromone^alpha * (1/distance)^beta) / sum(all unvisited)`
 - Uses roulette wheel selection for next city
 - **Performance critical:** This is the hotspot (~60-70% of runtime)
 
@@ -420,7 +471,8 @@ Default values for ACO:
 
 ### Class: AntColony
 
-**Purpose:** Manages the colony of ants, pheromone matrix, and algorithm execution.
+**Purpose:** Manages the colony of ants, pheromone matrix, and
+algorithm execution.
 
 **Member Variables:**
 
@@ -437,16 +489,21 @@ Default values for ACO:
 
 **Methods:**
 
-- `AntColony(const Graph& graph, int numAnts, double alpha, double beta, double rho, double Q)` - Constructor
-- `void initialize()` - Initialize pheromones using τ₀ = m / C^nn formula and reset state
+- `AntColony(const Graph& graph, int numAnts, double alpha,
+  double beta, double rho, double Q)` - Constructor
+- `void initialize()` - Initialize pheromones using τ₀ = m / C^nn
+  formula and reset state
 - `void runIteration()` - Execute one complete iteration
 - `void constructSolutions()` - All ants build tours
 - `void updatePheromones()` - Evaporate and deposit pheromones
 - `Tour solve(int maxIterations)` - Run algorithm for specified iterations
-- `Tour solve(int maxIterations, int convergenceIterations)` - Run with early stopping if no improvement for N iterations
+- `Tour solve(int maxIterations, int convergenceIterations)` - Run
+  with early stopping if no improvement for N iterations
 - `const Tour& getBestTour() const` - Get best solution found
-- `const std::vector<double>& getConvergenceData() const` - Get iteration history
-- `void setProgressCallback(callback, interval)` - Set callback function for progress updates (Python bindings)
+- `const std::vector<double>& getConvergenceData() const` - Get
+  iteration history
+- `void setProgressCallback(callback, interval)` - Set callback
+  function for progress updates (Python bindings)
 
 **Dependencies:** Graph, PheromoneMatrix, Ant, Tour
 
@@ -454,15 +511,18 @@ Default values for ACO:
 
 - Initial pheromone computed as τ₀ = m / C^nn (recommended in ACO literature)
 - Falls back to τ₀ = 1.0 if nearest neighbor tour length is zero or invalid
-- Can implement different pheromone update strategies (ant-cycle, ant-quantity, etc.)
+- Can implement different pheromone update strategies (ant-cycle,
+  ant-quantity, etc.)
 - Consider elitist strategy (only best ant deposits pheromones)
-- **Convergence-based stopping:** If `convergenceIterations` specified, solver stops early when no improvement for N iterations
+- **Convergence-based stopping:** If `convergenceIterations`
+  specified, solver stops early when no improvement for N iterations
 
 ---
 
 ### Class: TSPLoader
 
-**Purpose:** Loads TSP problem instances from files (coordinate, matrix, or TSPLIB format).
+**Purpose:** Loads TSP problem instances from files (coordinate,
+matrix, or TSPLIB format).
 
 **Member Variables:**
 
@@ -470,17 +530,23 @@ Default values for ACO:
 
 **Methods:**
 
-- `TSPLoader(const std::string& filename)` - Constructor (auto-searches common paths)
-- `Graph loadGraph()` - Parse file and return Graph object (auto-detects format)
-- `static Graph loadFromCoordinates(const std::string& filename)` - Load from coordinate file
-- `static Graph loadFromDistanceMatrix(const std::string& filename)` - Load from distance matrix
-- `static Graph loadFromTSPLIB(const std::string& filename)` - Load from TSPLIB format
+- `TSPLoader(const std::string& filename)` - Constructor
+  (auto-searches common paths)
+- `Graph loadGraph()` - Parse file and return Graph object
+  (auto-detects format)
+- `static Graph loadFromCoordinates(const std::string& filename)` -
+  Load from coordinate file
+- `static Graph loadFromDistanceMatrix(const std::string& filename)` -
+  Load from distance matrix
+- `static Graph loadFromTSPLIB(const std::string& filename)` - Load
+  from TSPLIB format
 
 **Dependencies:** Graph, City
 
 **Notes:**
 
-- Auto-detection: Checks for "NAME:", "TYPE:", "DIMENSION:" (TSPLIB), 3 fields → coordinates, >3 fields → matrix
+- Auto-detection: Checks for "NAME:", "TYPE:", "DIMENSION:" (TSPLIB),
+  3 fields → coordinates, >3 fields → matrix
 - Auto-searches paths: current dir, `data/`, `../data/`, `../../data/`
 - Returns empty Graph on error (check with `graph.isValid()`)
 - TSPLIB: Only EUC_2D edge weight type currently supported
@@ -491,7 +557,8 @@ Default values for ACO:
 
 **Expected Performance Characteristics:**
 
-- **~60-70%**: Probability calculation and city selection in `Ant::selectNextCity()`
+- **~60-70%**: Probability calculation and city selection in
+  `Ant::selectNextCity()`
   - Computing probabilities for all unvisited cities
   - Random number generation
   - Roulette wheel selection
@@ -509,7 +576,8 @@ Default values for ACO:
 
 **Data Structure Decisions:**
 
-Use `std::vector<std::vector<double>>` for distance and pheromone matrices even though sizes are fixed after initialization.
+Use `std::vector<std::vector<double>>` for distance and pheromone
+matrices even though sizes are fixed after initialization.
 
 **Reasons:**
 
@@ -520,7 +588,8 @@ Use `std::vector<std::vector<double>>` for distance and pheromone matrices even 
 
 **Potential Optimization (if profiling shows bottleneck):**
 
-- Flattened 1D vector: `std::vector<double>` with index `[i*n + j]` for better cache locality
+- Flattened 1D vector: `std::vector<double>` with index `[i*n + j]`
+  for better cache locality
 - Only store upper triangle of symmetric matrix (saves 50% memory)
 - Use `float` instead of `double` if precision allows
 
@@ -528,13 +597,20 @@ Use `std::vector<std::vector<double>>` for distance and pheromone matrices even 
 
 **Unit Tests (Google Test) - 106 tests total:**
 
-1. **City Class (7 tests):** Distance calculation accuracy, getter methods, edge cases
-2. **Graph Class (8 tests):** Distance matrix symmetry, correct lookups, invalid indices
-3. **Tour Class (16 tests):** Tour validation, distance calculation, invalid tour detection, edge cases
-4. **PheromoneMatrix Class (20 tests):** Initialization, evaporation, deposit, clamping, symmetry
-5. **Ant Class (21 tests):** Tour construction, probabilistic selection, parameter sensitivity, edge cases
-6. **AntColony Class (23 tests):** Convergence, best tour tracking, parameter variations, solution quality
-7. **TSPLoader Class (10 tests):** Format detection, coordinate loading, matrix loading, error handling
+1. **City Class (7 tests):** Distance calculation accuracy, getter
+   methods, edge cases
+2. **Graph Class (8 tests):** Distance matrix symmetry, correct
+   lookups, invalid indices
+3. **Tour Class (16 tests):** Tour validation, distance calculation,
+   invalid tour detection, edge cases
+4. **PheromoneMatrix Class (20 tests):** Initialization, evaporation,
+   deposit, clamping, symmetry
+5. **Ant Class (21 tests):** Tour construction, probabilistic
+   selection, parameter sensitivity, edge cases
+6. **AntColony Class (23 tests):** Convergence, best tour tracking,
+   parameter variations, solution quality
+7. **TSPLoader Class (10 tests):** Format detection, coordinate
+   loading, matrix loading, error handling
 8. **Example Tests (2 tests):** Basic assertion and string comparison
 
 **Verified Solution Quality:**
@@ -572,7 +648,7 @@ cd build/bin
 
 ### Example Output
 
-```
+```text
 ========================================
 Ant Colony Optimization - TSP Solver
 ========================================
@@ -611,57 +687,77 @@ Convergence Summary:
 ### Available TSPLIB Files (EUC_2D)
 
 **Small (< 100 cities):**
+
 - ulysses16 (16), burma14 (14), ulysses22 (22), bayg29 (29), fri26 (26)
 - att48 (48), berlin52 (52), st70 (70), eil51 (51), eil76 (76), eil101 (101)
 
 **Medium (100-500 cities):**
+
 - kroA100, kroB100, kroC100, kroD100, kroE100 (all 100)
 - lin105 (105), pr107 (107), bier127 (127), ch130 (130), ch150 (150)
-- kroA150, kroB150 (both 150), pr152 (152), rat195 (195), kroA200, kroB200 (both 200)
+- kroA150, kroB150 (both 150), pr152 (152), rat195 (195), kroA200,
+  kroB200 (both 200)
 
 **Large (500+ cities):**
+
 - rat575 (575), rat783 (783), pr1002 (1002), u1060 (1060), vm1084 (1084)
 - And many more up to 85,900 cities!
 
 ## Known Limitations
 
-1. **Edge Weight Types:** Only EUC_2D (Euclidean 2D) is supported. Files with ATT, GEO, or EXPLICIT types will fail to load.
+1. **Edge Weight Types:** Only EUC_2D (Euclidean 2D) is supported.
+   Files with ATT, GEO, or EXPLICIT types will fail to load.
 
-2. **Pheromone Strategy:** Uses basic Ant Cycle (pheromone deposited after tour completion). Does not implement:
+2. **Pheromone Strategy:** Uses basic Ant Cycle (pheromone deposited
+   after tour completion). Does not implement:
    - Ant Quantity (deposit during construction)
    - Elitist strategy (only best ant deposits)
-   - MAX-MIN Ant System bounds (implemented but not enforced by default)
+   - MAX-MIN Ant System bounds (implemented but not enforced by
+     default)
 
-3. **Solution Quality:** For large problems (1000+ cities), solutions may be 10-20% above optimal. Better parameter tuning or more iterations may help.
+3. **Solution Quality:** For large problems (1000+ cities), solutions
+   may be 10-20% above optimal. Better parameter tuning or more
+   iterations may help.
 
-4. **Performance:** No parallelization. All ants run sequentially. Could benefit from multi-threading.
+4. **Performance:** No parallelization. All ants run sequentially.
+   Could benefit from multi-threading.
 
-5. **Local Search:** No 2-opt or 3-opt local search improvement. Adding this would significantly improve solution quality.
+5. **Local Search:** No 2-opt or 3-opt local search improvement.
+   Adding this would significantly improve solution quality.
 
 ## Web Interface
 
-The project includes a full-stack web interface for interactive TSP solving with real-time visualization and advanced controls.
+The project includes a full-stack web interface for interactive TSP
+solving with real-time visualization and advanced controls.
 
 ### Features
 
 **Problem Preview:**
-- Cities are automatically loaded and displayed when selecting a TSP problem from dropdown
+
+- Cities are automatically loaded and displayed when selecting a TSP
+  problem from dropdown
 - Preview appears in top-right visualization before running solver
 - Allows visual inspection of problem layout before optimization
 
 **Solver Controls:**
-- **Iterations:** Set max iterations (10-10,000) or use convergence-based stopping
-- **Convergence Mode:** Stop automatically when no improvement for N iterations (default: 200)
+
+- **Iterations:** Set max iterations (10-10,000) or use
+  convergence-based stopping
+- **Convergence Mode:** Stop automatically when no improvement for N
+  iterations (default: 200)
 - **Number of Ants:** Auto-calculate (1-2 per city) or specify custom value
 - **ACO Parameters:** Adjustable α (pheromone), β (heuristic), ρ (evaporation)
 
 **Visualizations:**
+
 - **City Positions:** Real-time display with uniform viewport-based sizing
 - **Current Path:** Live tour updates during optimization
-- **Convergence Graph:** Monotonically decreasing plot of best solution over time
+- **Convergence Graph:** Monotonically decreasing plot of best
+  solution over time
 - **Status Console:** Real-time solver status and progress messages
 
 **Performance:**
+
 - WebSocket-based real-time updates (every 10 iterations)
 - C++ solver releases GIL for concurrent Python operations
 - Progress tracking with elapsed time and iteration count
@@ -669,6 +765,7 @@ The project includes a full-stack web interface for interactive TSP solving with
 ### Frontend (Next.js)
 
 Located in `frontend/`, built with:
+
 - Next.js 16 (App Router)
 - TypeScript
 - Tailwind CSS
@@ -676,6 +773,7 @@ Located in `frontend/`, built with:
 - socket.io-client (real-time updates)
 
 **Components:**
+
 - `aco-tsp-dashboard.tsx` - Main dashboard layout
 - `configuration-panel.tsx` - Problem selection and parameter controls
 - `city-visualization.tsx` - City/tour visualization with preview
@@ -684,6 +782,7 @@ Located in `frontend/`, built with:
 - `useSocket.ts` - WebSocket hook for backend communication
 
 **Running:**
+
 ```bash
 cd frontend
 npm install
@@ -693,6 +792,7 @@ npm run dev  # http://localhost:3000
 ### Backend (Flask)
 
 Located in `backend/`, provides:
+
 - REST API for benchmark listing and parameter defaults
 - WebSocket server for real-time optimization progress
 - Preview endpoint for loading cities without solving
@@ -700,12 +800,14 @@ Located in `backend/`, provides:
 - Convergence tracking and early stopping logic
 
 **WebSocket Events:**
+
 - `connect` → `connected`
 - `preview` → `preview_loaded` (load cities without solving)
 - `solve` → `loaded`, `progress` (every 10 iter), `complete`
 - `cancel` → `cancelled`
 
 **Running:**
+
 ```bash
 cd backend
 pip install -r requirements.txt
@@ -714,7 +816,8 @@ python app.py  # http://localhost:5000
 
 ## Python Bindings
 
-The project includes pybind11 bindings that expose the C++ solver to Python with near-native performance.
+The project includes pybind11 bindings that expose the C++ solver to
+Python with near-native performance.
 
 ### Quick Example
 
@@ -743,6 +846,7 @@ best_tour = colony.solve(100)
 ```
 
 **Key Features:**
+
 - Releases GIL during C++ computation (allows concurrent Python operations)
 - Real-time progress callbacks from C++
 - 10-15% overhead vs pure C++ CLI
@@ -768,7 +872,9 @@ best_tour = colony.solve(100)
 ### Papers
 
 - Dorigo, M., & Stützle, T. (2004). *Ant Colony Optimization*. MIT Press.
-- Dorigo, M., & Gambardella, L. M. (1997). "Ant colony system: a cooperative learning approach to the traveling salesman problem." *IEEE Transactions on Evolutionary Computation*.
+- Dorigo, M., & Gambardella, L. M. (1997). "Ant colony system: a
+  cooperative learning approach to the traveling salesman problem."
+  *IEEE Transactions on Evolutionary Computation*.
 
 ### Online Resources
 

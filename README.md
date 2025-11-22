@@ -1,10 +1,12 @@
 # Ant Colony Optimization - TSP Solver
 
-A C++ implementation of Ant Colony Optimization algorithm for solving the Travelling Salesman Problem, with Python bindings, Flask API, and Next.js web interface.
+A C++ implementation of Ant Colony Optimization algorithm for solving
+the Travelling Salesman Problem, with Python bindings, Flask API, and
+Next.js web interface.
 
 ## Project Structure
 
-```
+```text
 ant_colony/
 ├── cpp/                  # C++ core implementation
 │   ├── include/          # C++ header files (.h)
@@ -70,7 +72,8 @@ npm run dev
 **For remote/headless servers:**
 
 Add to your local `~/.ssh/config`:
-```
+
+```text
 Host your-server
     HostName your-server-address
     User your-username
@@ -78,13 +81,15 @@ Host your-server
     LocalForward 5000 localhost:5000
 ```
 
-Then: `ssh your-server`, run `make start`, and access http://localhost:3000 locally.
+Then: `ssh your-server`, run `make start`, and access
+http://localhost:3000 locally.
 
 ## Components
 
 ### C++ Core (106 tests passing)
 
 High-performance ACO implementation with:
+
 - Precomputed O(1) distance matrix lookups
 - TSPLIB format support (EUC_2D)
 - Convergence tracking and progress callbacks
@@ -110,6 +115,7 @@ print(f"Best distance: {best_tour.getDistance()}")
 ### Flask Backend
 
 REST API + WebSocket server for real-time optimization:
+
 - `GET /api/benchmarks` - List available problems
 - `GET /api/health` - Health check
 - WebSocket `solve` event - Run optimization with progress updates
@@ -117,6 +123,7 @@ REST API + WebSocket server for real-time optimization:
 ### Next.js Frontend
 
 React-based web interface featuring:
+
 - Problem selection from TSPLIB benchmarks
 - Real-time city/tour visualization with dynamic scaling
 - Live iteration path updates (updates every 10 iterations)
