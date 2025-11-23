@@ -41,7 +41,7 @@ interface ConfigurationPanelProps {
 
 export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }: ConfigurationPanelProps) {
   const [problem, setProblem] = useState("berlin52.tsp")
-  const [method, setMethod] = useState("traditional")
+  const [method, setMethod] = useState("elitist")  // Default to elitist strategy
   const [solverType, setSolverType] = useState("multi-thread")  // Default to multi-threaded
   const [rho, setRho] = useState(0.5)
   const [alpha, setAlpha] = useState(1.0)
@@ -51,8 +51,8 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
   const [numAnts, setNumAnts] = useState(20)
   const [useConvergence, setUseConvergence] = useState(false)
   const [convergenceIterations, setConvergenceIterations] = useState(200)
-  const [useLocalSearch, setUseLocalSearch] = useState(false)
-  const [use3Opt, setUse3Opt] = useState(true)
+  const [useLocalSearch, setUseLocalSearch] = useState(true)  // Default to enabled
+  const [use3Opt, setUse3Opt] = useState(true)  // Default to enabled (2-opt + 3-opt)
   const [localSearchMode, setLocalSearchMode] = useState("best")
   const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
   const [loadingBenchmarks, setLoadingBenchmarks] = useState(true)
