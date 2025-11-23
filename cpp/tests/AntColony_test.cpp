@@ -449,3 +449,173 @@ TEST(AntColonyTest, AutoThreadDetection) {
     EXPECT_TRUE(bestTour.validate(3));
     EXPECT_GT(bestTour.getDistance(), 0.0);
 }
+
+// ==================== Elitist Strategy Tests ====================
+
+// Test basic elitist strategy enables correctly
+TEST(AntColonyTest, ElitistStrategyBasic) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseElitist(true);
+    Tour bestTour = colony.solve(20);
+
+    // Should produce valid solution
+    EXPECT_TRUE(bestTour.validate(4));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test elitist vs non-elitist on same problem
+TEST(AntColonyTest, ElitistVsNonElitist) {
+    Graph graph = createSquareGraph();
+
+    // Non-elitist run
+    AntColony normalColony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+    normalColony.setUseElitist(false);
+    Tour normalTour = normalColony.solve(50);
+
+    // Elitist run
+    AntColony elitistColony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+    elitistColony.setUseElitist(true);
+    Tour elitistTour = elitistColony.solve(50);
+
+    // Both should be valid
+    EXPECT_TRUE(normalTour.validate(4));
+    EXPECT_TRUE(elitistTour.validate(4));
+
+    // Elitist should typically find better or equal solutions (allow some variance)
+    // At minimum, should be within reasonable bounds
+    double ratio = elitistTour.getDistance() / normalTour.getDistance();
+    EXPECT_GT(ratio, 0.5);  // Not more than 2× worse
+    EXPECT_LT(ratio, 2.0);  // Reasonable quality
+}
+
+// Test custom elitist weight
+TEST(AntColonyTest, ElitistCustomWeight) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseElitist(true);
+    colony.setElitistWeight(50.0);  // Custom weight instead of numAnts
+
+    Tour bestTour = colony.solve(15);
+
+    EXPECT_TRUE(bestTour.validate(3));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test pheromone mode: "best-iteration"
+TEST(AntColonyTest, PheromoneModeIterationBest) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setPheromoneMode("best-iteration");
+    Tour bestTour = colony.solve(20);
+
+    EXPECT_TRUE(bestTour.validate(4));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+    EXPECT_EQ(colony.getConvergenceData().size(), 20);
+}
+
+// Test pheromone mode: "best-so-far"
+TEST(AntColonyTest, PheromoneModeBestSoFar) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setPheromoneMode("best-so-far");
+    Tour bestTour = colony.solve(20);
+
+    EXPECT_TRUE(bestTour.validate(4));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test pheromone mode: "rank"
+TEST(AntColonyTest, PheromoneModeRank) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setPheromoneMode("rank");
+    colony.setRankSize(5);  // Only top 5 ants deposit
+    Tour bestTour = colony.solve(15);
+
+    EXPECT_TRUE(bestTour.validate(4));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test rank mode with auto rank size
+TEST(AntColonyTest, RankModeAutoSize) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setPheromoneMode("rank");
+    colony.setRankSize(0);  // Auto = numAnts / 2
+    Tour bestTour = colony.solve(10);
+
+    EXPECT_TRUE(bestTour.validate(3));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test combining elitist with different pheromone modes
+TEST(AntColonyTest, ElitistWithRankMode) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseElitist(true);
+    colony.setPheromoneMode("rank");
+    colony.setRankSize(10);
+    colony.setElitistWeight(15.0);
+
+    Tour bestTour = colony.solve(25);
+
+    EXPECT_TRUE(bestTour.validate(4));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test elitist with best-iteration mode
+TEST(AntColonyTest, ElitistWithBestIterationMode) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseElitist(true);
+    colony.setPheromoneMode("best-iteration");
+
+    Tour bestTour = colony.solve(20);
+
+    EXPECT_TRUE(bestTour.validate(3));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}
+
+// Test all pheromone modes produce valid tours
+TEST(AntColonyTest, AllPheromoneModes) {
+    Graph graph = createSquareGraph();
+    std::vector<std::string> modes = {"all", "best-iteration", "best-so-far", "rank"};
+
+    for (const auto& mode : modes) {
+        AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+        colony.setPheromoneMode(mode);
+
+        Tour bestTour = colony.solve(10);
+
+        EXPECT_TRUE(bestTour.validate(4)) << "Failed with mode: " << mode;
+        EXPECT_GT(bestTour.getDistance(), 0.0) << "Failed with mode: " << mode;
+    }
+}
+
+// Test convergence behavior with elitist strategy
+TEST(AntColonyTest, ElitistConvergence) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseElitist(true);
+    colony.solve(30);
+
+    const auto& convergence = colony.getConvergenceData();
+    EXPECT_EQ(convergence.size(), 30);
+
+    // Check monotonic improvement (best should never get worse)
+    double bestSoFar = std::numeric_limits<double>::max();
+    for (double dist : convergence) {
+        EXPECT_LE(dist, bestSoFar);
+        bestSoFar = std::min(bestSoFar, dist);
+    }
+}

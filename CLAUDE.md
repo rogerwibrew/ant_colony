@@ -8,23 +8,23 @@ working with code in this repository.
 C++17 Ant Colony Optimization (ACO) implementation for Travelling
 Salesman Problem using CMake and Google Test.
 
-**Current Status:** ✅ **FULLY IMPLEMENTED** - 126 tests passing.
+**Current Status:** ✅ **FULLY IMPLEMENTED** - 137 tests passing.
 All core classes complete and working. Production-ready ACO solver
 with CLI interface, TSPLIB format support, OpenMP multi-threading,
-and 2-opt/3-opt local search optimization. Recent bug fix ensures
-proper pheromone updates when using local search.
+2-opt/3-opt local search optimization, and elitist pheromone strategies.
 
 ## Roadmap / Planned Tasks
 
 1. **Improve UI** - 🚧 In progress: Preview feature, convergence
-   stopping, ant controls, visualization improvements, local search controls
+   stopping, ant controls, visualization improvements
 2. ✅ **Multi-core CPU support** - OpenMP parallelization integrated
    (10-12× speedup on 32 cores, runtime control via CLI/Python/Web UI)
 3. ✅ **2-opt/3-opt Local Search** - Significantly improved solution quality
    (achieving 0.03% above optimal on berlin52)
-4. **GPU acceleration** - Integrate GPU operations for performance
-5. **Additional solution methods** - Add elite ant and other ACO
-   variants (elitist pheromone, MAX-MIN Ant System)
+4. ✅ **Elitist Pheromone Strategies** - Four pheromone modes (all/best-iteration/best-so-far/rank)
+   with configurable elitist weighting, full-stack integration
+5. **GPU acceleration** - Integrate GPU operations for performance
+6. **Additional ACO variants** - MAX-MIN Ant System, Ant Colony System (ACS)
 6. **Full TSPLIB95 support** - Add all TSPLIB95 problems to the
    potential list, including fixing incompatible files in
    `uncompatibleData/`
@@ -844,6 +844,18 @@ cd build/bin
 
 # Multi-threaded with local search (recommended for large problems)
 ./ant_colony_tsp berlin52.tsp --iterations 200 --local-search --threads 8
+
+# Use elitist strategy (best-so-far tour gets weighted pheromone boost)
+./ant_colony_tsp berlin52.tsp --iterations 100 --elitist
+
+# Rank-based pheromone mode (only top-k ants deposit)
+./ant_colony_tsp berlin52.tsp --pheromone-mode rank --rank-size 10
+
+# Best-iteration mode (only best ant per iteration deposits)
+./ant_colony_tsp berlin52.tsp --pheromone-mode best-iteration
+
+# Combine elitist with rank mode and custom weight
+./ant_colony_tsp berlin52.tsp --elitist --elitist-weight 50 --pheromone-mode rank --rank-size 15
 ```
 
 ### Example Output
@@ -1152,13 +1164,29 @@ expected impact.
 
 ### Medium Priority
 
-**4. Elitist Pheromone Strategy** - ⭐⭐⭐⭐
-- **Impact:** Improved convergence and solution quality
-- **Implementation:** Only best-so-far ant deposits pheromones (or
-  weighted combination)
-- **Complexity:** Low
-- **Notes:** Simple modification to `updatePheromones()` method.
-  Classic ACO variant with good empirical results.
+**4. Elitist Pheromone Strategy** - ✅ **COMPLETE**
+- **Status:** Fully implemented with 11 comprehensive tests (137 tests total passing)
+- **Impact:** Improved convergence and solution quality through guided exploration
+- **Features:**
+  - **Elitist Ant System (EAS):** Best-so-far tour deposits additional weighted pheromones
+  - **Pheromone Modes:** 4 strategies available
+    - `"all"` (default): Classic Ant Cycle - all ants deposit
+    - `"best-iteration"`: Only iteration-best ant deposits
+    - `"best-so-far"`: Only global-best tour deposits
+    - `"rank"`: Top-k ants deposit with decreasing weights (Rank-Based AS)
+  - Configurable elitist weight (default: numAnts)
+  - Configurable rank size for rank mode (default: numAnts/2)
+- **Full-Stack Integration:**
+  - ✅ C++ core implementation in `updatePheromones()`
+  - ✅ CLI flags: `--elitist`, `--elitist-weight`, `--pheromone-mode`, `--rank-size`
+  - ✅ Python bindings: `setUseElitist()`, `setElitistWeight()`, `setPheromoneMode()`, `setRankSize()`
+  - ✅ Web UI: Method dropdown with "Elitist" and "Rank-Based" options
+- **How it works:**
+  - Base pheromone deposits from selected ants (based on mode)
+  - If elitist enabled: best-so-far tour deposits additional pheromones weighted by `elitistWeight`
+  - Rank mode: Top-k ants deposit with linearly decreasing weights
+  - Guides exploration toward promising regions while maintaining diversity
+- **Classic ACO Variant:** Well-established strategy with strong empirical results in literature
 
 **5. MAX-MIN Ant System (MMAS)** - ⭐⭐⭐⭐
 - **Impact:** Prevents premature convergence, more robust algorithm

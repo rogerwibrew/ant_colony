@@ -112,41 +112,108 @@ void AntColony::updatePheromones() {
     // Evaporate pheromones
     pheromones_.evaporate(rho_);
 
-    // Deposit pheromones from all ants using stored tours (which may be improved by local search)
-    // Use adaptive threading: cap threads at 2× ants to reduce atomic contention
-    #ifdef _OPENMP
-    int max_threads = omp_get_max_threads();
-    int effective_threads = std::min(max_threads, static_cast<int>(antTours_.size()) * 2);
-    #pragma omp parallel for num_threads(effective_threads) if(useParallel_ && antTours_.size() >= 8)
-    #endif
-    for (size_t antIdx = 0; antIdx < antTours_.size(); ++antIdx) {
-        const Tour& tour = antTours_[antIdx];
-
-        // Skip invalid tours (but allow distance 0 for single-city case)
-        if (tour.getSequence().empty()) {
-            continue;
+    // Helper function to deposit pheromones from a tour
+    auto depositTourPheromones = [&](const Tour& tour, double weight = 1.0) {
+        if (tour.getSequence().empty() || tour.getDistance() <= 0.0) {
+            return;
         }
 
-        double tourLength = tour.getDistance();
-
-        // Skip tours with zero distance (single city case)
-        if (tourLength <= 0.0) {
-            continue;
-        }
-
-        // Pheromone deposit amount: Q / tourLength
-        double depositAmount = Q_ / tourLength;
-
+        double depositAmount = (Q_ / tour.getDistance()) * weight;
         const std::vector<int>& tourSequence = tour.getSequence();
 
-        // Deposit pheromones on each edge in the tour
-        // depositPheromone already uses atomic operations for thread safety
         for (size_t i = 0; i < tourSequence.size(); ++i) {
             int cityA = tourSequence[i];
-            int cityB = tourSequence[(i + 1) % tourSequence.size()]; // Wrap around to start
-
+            int cityB = tourSequence[(i + 1) % tourSequence.size()];
             pheromones_.depositPheromone(cityA, cityB, depositAmount);
         }
+    };
+
+    // Determine which tours deposit pheromones based on pheromoneMode_
+    if (pheromoneMode_ == "best-iteration") {
+        // Only the best tour from this iteration deposits pheromones
+        if (!antTours_.empty()) {
+            // Find iteration best
+            const Tour* iterationBest = nullptr;
+            double bestDist = std::numeric_limits<double>::max();
+            for (const Tour& tour : antTours_) {
+                if (!tour.getSequence().empty() && tour.getDistance() < bestDist) {
+                    bestDist = tour.getDistance();
+                    iterationBest = &tour;
+                }
+            }
+            if (iterationBest) {
+                depositTourPheromones(*iterationBest);
+            }
+        }
+    } else if (pheromoneMode_ == "best-so-far") {
+        // Only the global best tour deposits pheromones
+        if (!bestTour_.getSequence().empty()) {
+            depositTourPheromones(bestTour_);
+        }
+    } else if (pheromoneMode_ == "rank") {
+        // Only top-k ants deposit pheromones (rank-based)
+        int effectiveRankSize = (rankSize_ > 0) ? rankSize_ : std::max(1, numAnts_ / 2);
+
+        // Sort tours by distance
+        std::vector<std::pair<double, const Tour*>> rankedTours;
+        for (const Tour& tour : antTours_) {
+            if (!tour.getSequence().empty() && tour.getDistance() > 0.0) {
+                rankedTours.emplace_back(tour.getDistance(), &tour);
+            }
+        }
+        std::sort(rankedTours.begin(), rankedTours.end());
+
+        // Deposit from top-k tours with decreasing weights
+        int count = std::min(effectiveRankSize, static_cast<int>(rankedTours.size()));
+        for (int rank = 0; rank < count; ++rank) {
+            // Weight decreases with rank: (rankSize - rank) / rankSize
+            double weight = static_cast<double>(count - rank) / count;
+            depositTourPheromones(*rankedTours[rank].second, weight);
+        }
+    } else {
+        // Default: "all" - all ants deposit pheromones (classic Ant Cycle)
+        // Use adaptive threading: cap threads at 2× ants to reduce atomic contention
+        #ifdef _OPENMP
+        int max_threads = omp_get_max_threads();
+        int effective_threads = std::min(max_threads, static_cast<int>(antTours_.size()) * 2);
+        #pragma omp parallel for num_threads(effective_threads) if(useParallel_ && antTours_.size() >= 8)
+        #endif
+        for (size_t antIdx = 0; antIdx < antTours_.size(); ++antIdx) {
+            const Tour& tour = antTours_[antIdx];
+
+            // Skip invalid tours (but allow distance 0 for single-city case)
+            if (tour.getSequence().empty()) {
+                continue;
+            }
+
+            double tourLength = tour.getDistance();
+
+            // Skip tours with zero distance (single city case)
+            if (tourLength <= 0.0) {
+                continue;
+            }
+
+            // Pheromone deposit amount: Q / tourLength
+            double depositAmount = Q_ / tourLength;
+
+            const std::vector<int>& tourSequence = tour.getSequence();
+
+            // Deposit pheromones on each edge in the tour
+            // depositPheromone already uses atomic operations for thread safety
+            for (size_t i = 0; i < tourSequence.size(); ++i) {
+                int cityA = tourSequence[i];
+                int cityB = tourSequence[(i + 1) % tourSequence.size()]; // Wrap around to start
+
+                pheromones_.depositPheromone(cityA, cityB, depositAmount);
+            }
+        }
+    }
+
+    // Elitist strategy: best-so-far tour deposits additional weighted pheromones
+    if (useElitist_ && !bestTour_.getSequence().empty()) {
+        // Calculate effective weight (default = numAnts)
+        double effectiveWeight = (elitistWeight_ > 0.0) ? elitistWeight_ : static_cast<double>(numAnts_);
+        depositTourPheromones(bestTour_, effectiveWeight);
     }
 }
 
@@ -321,4 +388,22 @@ void AntColony::setLocalSearchMode(const std::string& mode) {
     if (mode == "best" || mode == "all" || mode == "none") {
         localSearchMode_ = mode;
     }
+}
+
+void AntColony::setUseElitist(bool useElitist) {
+    useElitist_ = useElitist;
+}
+
+void AntColony::setElitistWeight(double weight) {
+    elitistWeight_ = weight;
+}
+
+void AntColony::setPheromoneMode(const std::string& mode) {
+    if (mode == "all" || mode == "best-iteration" || mode == "best-so-far" || mode == "rank") {
+        pheromoneMode_ = mode;
+    }
+}
+
+void AntColony::setRankSize(int rankSize) {
+    rankSize_ = rankSize;
 }

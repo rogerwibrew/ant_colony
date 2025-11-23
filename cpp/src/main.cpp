@@ -27,6 +27,13 @@ void printUsage(const char* programName) {
     std::cout << "  --beta <f>       Heuristic importance (default: 2.0)\n";
     std::cout << "  --rho <f>        Evaporation rate (default: 0.5)\n";
     std::cout << "  --Q <f>          Pheromone deposit factor (default: 100.0)\n";
+    std::cout << "\nElitist Strategy Options:\n";
+    std::cout << "  --elitist        Enable elitist pheromone deposits (default: disabled)\n";
+    std::cout << "  --elitist-weight <f> Weight for elitist deposits (default: numAnts)\n";
+    std::cout << "  --pheromone-mode <mode> Pheromone update strategy:\n";
+    std::cout << "                   'all' (all ants, default), 'best-iteration' (iteration best),\n";
+    std::cout << "                   'best-so-far' (global best), 'rank' (top-k ants)\n";
+    std::cout << "  --rank-size <n>  Number of elite ants for rank mode (default: numAnts/2)\n";
     std::cout << "\nLocal Search Options:\n";
     std::cout << "  --local-search   Enable 2-opt/3-opt local search (default: disabled)\n";
     std::cout << "  --2opt-only      Use only 2-opt (skip 3-opt, default: use both)\n";
@@ -64,6 +71,10 @@ int main(int argc, char** argv) {
     bool useLocalSearch = false;  // Enable local search (2-opt/3-opt)
     bool use3opt = true;  // Use 3-opt in addition to 2-opt
     std::string localSearchMode = "best";  // "best", "all", or "none"
+    bool useElitist = false;  // Enable elitist strategy
+    double elitistWeight = -1.0;  // -1 means use numAnts (set after loading graph)
+    std::string pheromoneMode = "all";  // "all", "best-iteration", "best-so-far", "rank"
+    int rankSize = -1;  // -1 means use numAnts/2 (auto)
 
     // Parse command-line arguments
     if (argc < 2) {
@@ -91,6 +102,11 @@ int main(int argc, char** argv) {
         }
         if (option == "--2opt-only") {
             use3opt = false;
+            i++;
+            continue;
+        }
+        if (option == "--elitist") {
+            useElitist = true;
             i++;
             continue;
         }
@@ -155,6 +171,25 @@ int main(int argc, char** argv) {
                     localSearchMode = value;
                 } else {
                     std::cerr << "Error: --ls-mode must be 'best', 'all', or 'none'" << std::endl;
+                    return 1;
+                }
+            } else if (option == "--elitist-weight") {
+                elitistWeight = std::stod(value);
+                if (elitistWeight < 0.0) {
+                    std::cerr << "Error: Elitist weight must be non-negative" << std::endl;
+                    return 1;
+                }
+            } else if (option == "--pheromone-mode") {
+                if (value == "all" || value == "best-iteration" || value == "best-so-far" || value == "rank") {
+                    pheromoneMode = value;
+                } else {
+                    std::cerr << "Error: --pheromone-mode must be 'all', 'best-iteration', 'best-so-far', or 'rank'" << std::endl;
+                    return 1;
+                }
+            } else if (option == "--rank-size") {
+                rankSize = std::stoi(value);
+                if (rankSize < 0) {
+                    std::cerr << "Error: Rank size must be non-negative" << std::endl;
                     return 1;
                 }
             } else {
@@ -228,6 +263,19 @@ int main(int argc, char** argv) {
     } else {
         std::cout << "Disabled\n";
     }
+    std::cout << "  Elitist Strategy:     ";
+    if (useElitist) {
+        double effectiveWeight = (elitistWeight >= 0.0) ? elitistWeight : static_cast<double>(numAnts);
+        std::cout << "Enabled (weight: " << effectiveWeight << ")\n";
+    } else {
+        std::cout << "Disabled\n";
+    }
+    std::cout << "  Pheromone Mode:       " << pheromoneMode;
+    if (pheromoneMode == "rank") {
+        int effectiveRankSize = (rankSize >= 0) ? rankSize : (numAnts / 2);
+        std::cout << " (top " << effectiveRankSize << " ants)";
+    }
+    std::cout << "\n";
     std::cout << "\n";
 
     // Initialize and run ACO
@@ -242,6 +290,16 @@ int main(int argc, char** argv) {
     colony.setUseLocalSearch(useLocalSearch);
     colony.setUse3Opt(use3opt);
     colony.setLocalSearchMode(localSearchMode);
+
+    // Configure elitist strategy
+    colony.setUseElitist(useElitist);
+    if (elitistWeight >= 0.0) {
+        colony.setElitistWeight(elitistWeight);
+    }
+    colony.setPheromoneMode(pheromoneMode);
+    if (rankSize >= 0) {
+        colony.setRankSize(rankSize);
+    }
 
     // Progress callback to show updates every 10 iterations
     int lastReportedIteration = 0;

@@ -62,6 +62,22 @@ public:
     // Default: "best"
     void setLocalSearchMode(const std::string& mode);
 
+    // Enable/disable elitist strategy (default: disabled)
+    // When enabled, best-so-far tour deposits additional weighted pheromones
+    void setUseElitist(bool useElitist);
+
+    // Set elitist weight factor (default: numAnts)
+    // Best-so-far tour deposits pheromones multiplied by this weight
+    void setElitistWeight(double weight);
+
+    // Set pheromone update mode: "all" (all ants), "best-iteration" (only iteration best),
+    // "best-so-far" (only global best), "rank" (top-k ants)
+    // Default: "all" (classic Ant Cycle)
+    void setPheromoneMode(const std::string& mode);
+
+    // Set number of elite ants for rank-based mode (default: numAnts/2)
+    void setRankSize(int rankSize);
+
     // Get best solution found
     const Tour& getBestTour() const { return bestTour_; }
 
@@ -99,6 +115,12 @@ private:
     bool useLocalSearch_ = false;        // Enable local search (2-opt/3-opt)
     bool use3opt_ = true;                // Use 3-opt in addition to 2-opt
     std::string localSearchMode_ = "best";  // "best", "all", or "none"
+
+    // Elitist strategy control
+    bool useElitist_ = false;            // Enable elitist pheromone deposits
+    double elitistWeight_ = 0.0;         // Weight for elitist pheromone (0 = auto = numAnts)
+    std::string pheromoneMode_ = "all";  // "all", "best-iteration", "best-so-far", "rank"
+    int rankSize_ = 0;                   // Number of elite ants for rank mode (0 = auto = numAnts/2)
 
     // Store constructed/improved tours for pheromone updates
     std::vector<Tour> antTours_;         // Tours from each ant (possibly improved by local search)

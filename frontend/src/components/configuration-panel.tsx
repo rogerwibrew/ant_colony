@@ -8,6 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Play, Square } from "lucide-react"
 
+interface Benchmark {
+  name: string
+  cities: number
+  optimal: number
+}
+
 interface ConfigurationPanelProps {
   onSolve: (config: {
     problem: string
@@ -23,6 +29,10 @@ interface ConfigurationPanelProps {
     useLocalSearch: boolean
     use3Opt: boolean
     localSearchMode: string
+    useElitist: boolean
+    elitistWeight: number | null
+    pheromoneMode: string
+    rankSize: number | null
   }) => void
   onPreview: (benchmark: string) => void
   isRunning: boolean
@@ -44,6 +54,24 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
   const [useLocalSearch, setUseLocalSearch] = useState(false)
   const [use3Opt, setUse3Opt] = useState(true)
   const [localSearchMode, setLocalSearchMode] = useState("best")
+  const [benchmarks, setBenchmarks] = useState<Benchmark[]>([])
+  const [loadingBenchmarks, setLoadingBenchmarks] = useState(true)
+
+  // Fetch available benchmarks from API
+  useEffect(() => {
+    const fetchBenchmarks = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/benchmarks')
+        const data = await response.json()
+        setBenchmarks(data.benchmarks)
+        setLoadingBenchmarks(false)
+      } catch (error) {
+        console.error('Failed to fetch benchmarks:', error)
+        setLoadingBenchmarks(false)
+      }
+    }
+    fetchBenchmarks()
+  }, [])
 
   // Preview cities when problem changes
   const handleProblemChange = (newProblem: string) => {
@@ -53,10 +81,17 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
 
   // Load initial preview on mount
   useEffect(() => {
-    onPreview(problem)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!loadingBenchmarks) {
+      onPreview(problem)
+    }
+  }, [loadingBenchmarks]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSolve = () => {
+    // Map method to elitist parameters
+    const useElitist = method === "elitist"
+    const pheromoneMode = method === "rank-based" ? "rank" :
+                          method === "elitist" ? "all" : "all"
+
     onSolve({
       problem,
       method,
@@ -70,7 +105,11 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
       convergenceIterations,
       useLocalSearch,
       use3Opt,
-      localSearchMode
+      localSearchMode,
+      useElitist,
+      elitistWeight: null,  // Use default (numAnts)
+      pheromoneMode,
+      rankSize: null  // Use default (numAnts/2)
     })
   }
 
@@ -83,18 +122,17 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
         {/* Dropdowns in a grid */}
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1">
-            <Label htmlFor="problem" className="text-xs">Problem</Label>
-            <Select value={problem} onValueChange={handleProblemChange}>
+            <Label htmlFor="problem" className="text-xs">Problem ({benchmarks.length} available)</Label>
+            <Select value={problem} onValueChange={handleProblemChange} disabled={loadingBenchmarks}>
               <SelectTrigger id="problem" className="h-8 text-xs">
-                <SelectValue />
+                <SelectValue placeholder={loadingBenchmarks ? "Loading..." : "Select problem"} />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="berlin52.tsp">Berlin52</SelectItem>
-                <SelectItem value="eil76.tsp">Eil76</SelectItem>
-                <SelectItem value="kroA100.tsp">KroA100</SelectItem>
-                <SelectItem value="ch150.tsp">Ch150</SelectItem>
-                <SelectItem value="tsp225.tsp">TSP225</SelectItem>
-                <SelectItem value="a280.tsp">A280</SelectItem>
+              <SelectContent className="max-h-[300px]">
+                {benchmarks.map((bench) => (
+                  <SelectItem key={bench.name} value={bench.name}>
+                    {bench.name.replace('.tsp', '')} ({bench.cities} cities)
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

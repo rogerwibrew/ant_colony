@@ -276,6 +276,33 @@ PYBIND11_MODULE(aco_solver, m) {
              "Set when to apply local search\n\n"
              "Parameters:\n"
              "  mode: 'best' (only best tour), 'all' (all ant tours), or 'none' (default: 'best')")
+        .def("setUseElitist", &AntColony::setUseElitist,
+             py::arg("useElitist"),
+             "Enable/disable elitist pheromone strategy\n\n"
+             "Parameters:\n"
+             "  useElitist: True to enable, False to disable (default: False)\n\n"
+             "When enabled, the best-so-far tour deposits additional weighted pheromones")
+        .def("setElitistWeight", &AntColony::setElitistWeight,
+             py::arg("weight"),
+             "Set elitist weight factor\n\n"
+             "Parameters:\n"
+             "  weight: Multiplier for best-so-far pheromone deposits (default: numAnts)\n\n"
+             "Note: Only effective if elitist strategy is enabled")
+        .def("setPheromoneMode", &AntColony::setPheromoneMode,
+             py::arg("mode"),
+             "Set pheromone update strategy\n\n"
+             "Parameters:\n"
+             "  mode: Pheromone deposit mode:\n"
+             "    - 'all': All ants deposit pheromones (classic Ant Cycle, default)\n"
+             "    - 'best-iteration': Only iteration-best ant deposits\n"
+             "    - 'best-so-far': Only global-best tour deposits\n"
+             "    - 'rank': Top-k ants deposit with decreasing weights")
+        .def("setRankSize", &AntColony::setRankSize,
+             py::arg("rankSize"),
+             "Set number of elite ants for rank-based mode\n\n"
+             "Parameters:\n"
+             "  rankSize: Number of top ants that deposit pheromones (default: numAnts/2)\n\n"
+             "Note: Only effective when pheromoneMode is 'rank'")
         .def("getNumAnts", &AntColony::getNumAnts,
              "Get number of ants")
         .def("getAlpha", &AntColony::getAlpha,

@@ -80,6 +80,12 @@ class SolverManager:
         use_3opt = params.get('use3Opt', True)
         local_search_mode = params.get('localSearchMode', 'best')
 
+        # Elitist strategy parameters
+        use_elitist = params.get('useElitist', False)
+        elitist_weight = params.get('elitistWeight')  # None = use default (numAnts)
+        pheromone_mode = params.get('pheromoneMode', 'all')
+        rank_size = params.get('rankSize')  # None = use default (numAnts/2)
+
         # Create colony
         colony = aco_solver.AntColony(
             self.graph,
@@ -98,6 +104,14 @@ class SolverManager:
         colony.setUseLocalSearch(use_local_search)
         colony.setUse3Opt(use_3opt)
         colony.setLocalSearchMode(local_search_mode)
+
+        # Configure elitist strategy
+        colony.setUseElitist(use_elitist)
+        if elitist_weight is not None:
+            colony.setElitistWeight(elitist_weight)
+        colony.setPheromoneMode(pheromone_mode)
+        if rank_size is not None:
+            colony.setRankSize(rank_size)
 
         # Initialize
         colony.initialize()
