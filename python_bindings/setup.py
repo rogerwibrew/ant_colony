@@ -20,6 +20,7 @@ cpp_sources = [
     '../cpp/src/PheromoneMatrix.cpp',
     '../cpp/src/Ant.cpp',
     '../cpp/src/AntColony.cpp',
+    '../cpp/src/LocalSearch.cpp',
 ]
 
 # Compiler flags

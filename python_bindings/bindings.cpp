@@ -9,6 +9,7 @@
 #include "PheromoneMatrix.h"
 #include "Ant.h"
 #include "AntColony.h"
+#include "LocalSearch.h"
 
 namespace py = pybind11;
 
@@ -138,6 +139,38 @@ PYBIND11_MODULE(aco_solver, m) {
         .def("getMaxPheromone", &PheromoneMatrix::getMaxPheromone,
              "Get maximum pheromone bound");
 
+    // LocalSearch class (static methods only)
+    py::class_<LocalSearch>(m, "LocalSearch")
+        .def_static("twoOpt", &LocalSearch::twoOpt,
+             py::arg("tour"),
+             py::arg("graph"),
+             "Improve tour using 2-opt edge swapping\n\n"
+             "Parameters:\n"
+             "  tour: Tour to improve (modified in-place)\n"
+             "  graph: Graph with distance information\n\n"
+             "Returns:\n"
+             "  True if improvement was made, False if already at local optimum")
+        .def_static("threeOpt", &LocalSearch::threeOpt,
+             py::arg("tour"),
+             py::arg("graph"),
+             "Improve tour using 3-opt edge swapping\n\n"
+             "Parameters:\n"
+             "  tour: Tour to improve (modified in-place)\n"
+             "  graph: Graph with distance information\n\n"
+             "Returns:\n"
+             "  True if improvement was made, False if already at local optimum")
+        .def_static("improve", &LocalSearch::improve,
+             py::arg("tour"),
+             py::arg("graph"),
+             py::arg("use3opt") = true,
+             "Apply both 2-opt and optionally 3-opt in sequence\n\n"
+             "Parameters:\n"
+             "  tour: Tour to improve (modified in-place)\n"
+             "  graph: Graph with distance information\n"
+             "  use3opt: If False, only apply 2-opt (default: True)\n\n"
+             "Returns:\n"
+             "  True if any improvement was made");
+
     // Ant class
     py::class_<Ant>(m, "Ant")
         .def(py::init<int, int>(),
@@ -227,6 +260,22 @@ PYBIND11_MODULE(aco_solver, m) {
              "Parameters:\n"
              "  numThreads: 0=auto-detect, 1=serial, 2+=specific thread count\n\n"
              "Note: Only effective if OpenMP is available and useParallel is True")
+        .def("setUseLocalSearch", &AntColony::setUseLocalSearch,
+             py::arg("useLocalSearch"),
+             "Enable/disable local search optimization (2-opt/3-opt)\n\n"
+             "Parameters:\n"
+             "  useLocalSearch: True to enable, False to disable (default: False)")
+        .def("setUse3Opt", &AntColony::setUse3Opt,
+             py::arg("use3opt"),
+             "Enable/disable 3-opt in addition to 2-opt\n\n"
+             "Parameters:\n"
+             "  use3opt: True for 2-opt+3-opt, False for 2-opt only (default: True)\n\n"
+             "Note: Only effective if local search is enabled")
+        .def("setLocalSearchMode", &AntColony::setLocalSearchMode,
+             py::arg("mode"),
+             "Set when to apply local search\n\n"
+             "Parameters:\n"
+             "  mode: 'best' (only best tour), 'all' (all ant tours), or 'none' (default: 'best')")
         .def("getNumAnts", &AntColony::getNumAnts,
              "Get number of ants")
         .def("getAlpha", &AntColony::getAlpha,

@@ -88,17 +88,21 @@ http://localhost:3000 locally.
 
 ## Components
 
-### C++ Core (112 tests passing)
+### C++ Core (126 tests passing)
 
 High-performance ACO implementation with:
 
 - **OpenMP multi-threading** (10-12× speedup on multi-core CPUs)
+- **2-opt/3-opt local search** (achieving 0.03% above optimal on berlin52)
 - Precomputed O(1) distance matrix lookups
 - TSPLIB format support (EUC_2D)
 - Convergence tracking and progress callbacks
 - CLI with customizable parameters
 
 ```bash
+# With local search (recommended for best quality)
+./ant_colony_tsp berlin52.tsp --local-search --ants 30 --iterations 100
+
 # Multi-threaded (default - auto-detects cores)
 ./ant_colony_tsp berlin52.tsp --ants 50 --iterations 200
 
@@ -108,13 +112,16 @@ High-performance ACO implementation with:
 # Force single-threaded execution
 ./ant_colony_tsp berlin52.tsp --serial
 
+# 2-opt only (faster than 2-opt+3-opt)
+./ant_colony_tsp berlin52.tsp --local-search --2opt-only
+
 # Full parameter customization
-./ant_colony_tsp berlin52.tsp --ants 50 --iterations 200 --alpha 1.5 --beta 3.0 --threads 16
+./ant_colony_tsp berlin52.tsp --ants 50 --iterations 200 --alpha 1.5 --beta 3.0 --threads 16 --local-search
 ```
 
 ### Python Bindings
 
-pybind11 bindings exposing the C++ solver to Python with full OpenMP support:
+pybind11 bindings exposing the C++ solver to Python with full OpenMP and local search support:
 
 ```python
 import aco_solver
@@ -124,15 +131,20 @@ loader = aco_solver.TSPLoader("berlin52.tsp")
 graph = loader.loadGraph()
 
 # Create colony
-colony = aco_solver.AntColony(graph, 20, 1.0, 2.0, 0.5, 100.0)
+colony = aco_solver.AntColony(graph, 30, 1.0, 2.0, 0.5, 100.0)
 
 # Control threading (optional - defaults to multi-threaded)
 colony.setUseParallel(True)   # Enable OpenMP
 colony.setNumThreads(0)        # 0=auto-detect, 1=serial, 2+=specific count
 
+# Enable local search for better solution quality
+colony.setUseLocalSearch(True)      # Enable 2-opt/3-opt
+colony.setUse3Opt(True)              # Use both 2-opt and 3-opt (default)
+colony.setLocalSearchMode("best")    # Apply to best tour only (default)
+
 # Solve
 best_tour = colony.solve(100)
-print(f"Best distance: {best_tour.getDistance()}")
+print(f"Best distance: {best_tour.getDistance():.2f}")
 ```
 
 ### Flask Backend
@@ -149,12 +161,14 @@ React-based web interface featuring:
 
 - Problem selection from TSPLIB benchmarks
 - **Solver type selection** (Single-threaded / Multi-threaded / GPU)
+- **Local search controls** (Enable/disable, 2-opt only, mode selection)
 - Real-time city/tour visualization with dynamic scaling
 - Live iteration path updates (updates every 10 iterations)
 - Convergence chart with auto-scaling y-axis
-- Best path visualization
+- Best path visualization with solution quality metrics
 - Parameter configuration (alpha, beta, rho, iterations, ants)
 - Convergence-based stopping criterion
+- **Status console** showing iteration progress and optimality gap
 - Clean cream/blue color scheme
 - Responsive layout with 2x2 grid dashboard
 
@@ -177,13 +191,14 @@ mkdir build && cd build
 cmake ..    # Should show "OpenMP found - parallel execution enabled"
 cmake --build .
 
-# Run tests (112 tests)
+# Run tests (126 tests)
 ctest --output-on-failure
 
-# Test CLI with threading
-./bin/ant_colony_tsp berlin52.tsp          # Auto-detect cores
-./bin/ant_colony_tsp berlin52.tsp --threads 8  # Use 8 threads
-./bin/ant_colony_tsp berlin52.tsp --serial     # Single-threaded
+# Test CLI with threading and local search
+./bin/ant_colony_tsp berlin52.tsp                    # Auto-detect cores
+./bin/ant_colony_tsp berlin52.tsp --local-search     # With local search
+./bin/ant_colony_tsp berlin52.tsp --threads 8        # Use 8 threads
+./bin/ant_colony_tsp berlin52.tsp --serial           # Single-threaded
 ```
 
 ### Python Bindings
@@ -221,16 +236,23 @@ npm run dev   # Runs on http://localhost:3000
 | iterations| 100     | Maximum iterations |
 | useParallel | true  | Enable OpenMP multi-threading |
 | numThreads | 0      | Thread count (0=auto, 1=serial, 2+=specific) |
+| useLocalSearch | false | Enable 2-opt/3-opt local search |
+| use3Opt | true    | Use both 2-opt and 3-opt (when local search enabled) |
+| localSearchMode | best | When to apply local search (best, all, none) |
 
 ## Benchmark Results
 
-### Solution Quality
+### Solution Quality (with Local Search)
 
-| Problem | Cities | Optimal | ACO Result | Gap |
-|---------|--------|---------|------------|-----|
-| berlin52| 52     | 7542    | ~7630      | ~1.2% |
-| eil51   | 51     | 426     | ~432       | ~1.4% |
-| kroA100 | 100    | 21282   | ~21800     | ~2.4% |
+| Problem | Cities | Optimal | ACO + LS Result | Gap |
+|---------|--------|---------|-----------------|-----|
+| berlin52| 52     | 7542    | 7544-7607       | 0.03-0.86% |
+| eil51   | 51     | 426     | 442-448         | 3.8-5.2% |
+| st70    | 70     | 675     | 699-724         | 3.5-7.3% |
+
+**Best recorded result:** berlin52 at 7544.37 (0.03% above optimal)
+
+See [BENCHMARKS.md](BENCHMARKS.md) for comprehensive benchmarking details.
 
 ### Performance (OpenMP Multi-Threading)
 
@@ -252,6 +274,8 @@ For detailed information, see:
 
 - **[CLAUDE.md](CLAUDE.md)** - Complete class specifications, architecture,
   and development guide
+- **[BENCHMARKS.md](BENCHMARKS.md)** - Comprehensive local search benchmarking
+  results and analysis
 - **[cpu_parallel.md](cpu_parallel.md)** - In-depth explanation of OpenMP
   parallelization (educational guide)
 - **[INTEGRATION_SUMMARY.md](INTEGRATION_SUMMARY.md)** - Full-stack OpenMP

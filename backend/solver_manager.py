@@ -75,6 +75,11 @@ class SolverManager:
         use_parallel = params.get('useParallel', Config.DEFAULT_PARAMS['useParallel'])
         num_threads = params.get('numThreads', Config.DEFAULT_PARAMS['numThreads'])
 
+        # Local search parameters
+        use_local_search = params.get('useLocalSearch', False)
+        use_3opt = params.get('use3Opt', True)
+        local_search_mode = params.get('localSearchMode', 'best')
+
         # Create colony
         colony = aco_solver.AntColony(
             self.graph,
@@ -88,6 +93,11 @@ class SolverManager:
         # Configure threading
         colony.setUseParallel(use_parallel)
         colony.setNumThreads(num_threads)
+
+        # Configure local search
+        colony.setUseLocalSearch(use_local_search)
+        colony.setUse3Opt(use_3opt)
+        colony.setLocalSearchMode(local_search_mode)
 
         # Initialize
         colony.initialize()
@@ -157,14 +167,26 @@ class SolverManager:
             running_best = min(running_best, dist)
             global_bests.append(running_best)
 
+        # Calculate optimality gap if we know the optimal distance
+        best_distance = best_tour.getDistance()
+        optimal_distance = None
+        optimality_gap = None
+
+        if self.benchmark_name and self.benchmark_name in Config.BENCHMARKS:
+            optimal_distance = Config.BENCHMARKS[self.benchmark_name]['optimal']
+            # Calculate percentage above optimal: ((solution - optimal) / optimal) * 100
+            optimality_gap = ((best_distance - optimal_distance) / optimal_distance) * 100
+
         return {
-            'bestDistance': best_tour.getDistance(),
+            'bestDistance': best_distance,
             'bestTour': best_tour.getSequence(),
             'convergenceHistory': global_bests,
             'cities': self.cities_coords,
             'elapsedTime': round(elapsed, 2),
             'totalIterations': total_iterations,
-            'benchmark': self.benchmark_name
+            'benchmark': self.benchmark_name,
+            'optimalDistance': optimal_distance,
+            'optimalityGap': round(optimality_gap, 2) if optimality_gap is not None else None
         }
 
     def stop(self):

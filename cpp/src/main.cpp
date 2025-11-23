@@ -27,6 +27,10 @@ void printUsage(const char* programName) {
     std::cout << "  --beta <f>       Heuristic importance (default: 2.0)\n";
     std::cout << "  --rho <f>        Evaporation rate (default: 0.5)\n";
     std::cout << "  --Q <f>          Pheromone deposit factor (default: 100.0)\n";
+    std::cout << "\nLocal Search Options:\n";
+    std::cout << "  --local-search   Enable 2-opt/3-opt local search (default: disabled)\n";
+    std::cout << "  --2opt-only      Use only 2-opt (skip 3-opt, default: use both)\n";
+    std::cout << "  --ls-mode <mode> When to apply: 'best' (only best tour), 'all' (all tours), 'none' (default: best)\n";
     std::cout << "\nThreading Options:\n";
     std::cout << "  --threads <n>    Number of threads (0=auto, 1=serial, 2+=specific, default: 0)\n";
     std::cout << "  --serial         Force single-threaded execution (same as --threads 1)\n";
@@ -57,6 +61,9 @@ int main(int argc, char** argv) {
     double Q = 100.0;
     int numThreads = 0;  // 0 = auto-detect, 1 = serial, 2+ = specific count
     bool useParallel = true;  // Enable parallel execution by default (if OpenMP available)
+    bool useLocalSearch = false;  // Enable local search (2-opt/3-opt)
+    bool use3opt = true;  // Use 3-opt in addition to 2-opt
+    std::string localSearchMode = "best";  // "best", "all", or "none"
 
     // Parse command-line arguments
     if (argc < 2) {
@@ -70,10 +77,20 @@ int main(int argc, char** argv) {
     for (int i = 2; i < argc; ) {
         std::string option = argv[i];
 
-        // Handle --serial flag (no argument)
+        // Handle flags that don't require arguments
         if (option == "--serial") {
             numThreads = 1;
             useParallel = false;
+            i++;
+            continue;
+        }
+        if (option == "--local-search") {
+            useLocalSearch = true;
+            i++;
+            continue;
+        }
+        if (option == "--2opt-only") {
+            use3opt = false;
             i++;
             continue;
         }
@@ -132,6 +149,13 @@ int main(int argc, char** argv) {
                 }
                 if (numThreads == 1) {
                     useParallel = false;
+                }
+            } else if (option == "--ls-mode") {
+                if (value == "best" || value == "all" || value == "none") {
+                    localSearchMode = value;
+                } else {
+                    std::cerr << "Error: --ls-mode must be 'best', 'all', or 'none'" << std::endl;
+                    return 1;
                 }
             } else {
                 std::cerr << "Error: Unknown option " << option << std::endl;
@@ -197,6 +221,13 @@ int main(int argc, char** argv) {
 #else
     std::cout << "Serial (OpenMP not available)\n";
 #endif
+    std::cout << "  Local Search:         ";
+    if (useLocalSearch) {
+        std::cout << "Enabled (" << (use3opt ? "2-opt + 3-opt" : "2-opt only")
+                  << ", mode: " << localSearchMode << ")\n";
+    } else {
+        std::cout << "Disabled\n";
+    }
     std::cout << "\n";
 
     // Initialize and run ACO
@@ -206,6 +237,11 @@ int main(int argc, char** argv) {
     // Configure threading
     colony.setUseParallel(useParallel);
     colony.setNumThreads(numThreads);
+
+    // Configure local search
+    colony.setUseLocalSearch(useLocalSearch);
+    colony.setUse3Opt(use3opt);
+    colony.setLocalSearchMode(localSearchMode);
 
     // Progress callback to show updates every 10 iterations
     int lastReportedIteration = 0;

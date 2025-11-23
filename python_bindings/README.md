@@ -45,6 +45,22 @@ best_tour = colony.solve(100)
 print(f"Best distance: {best_tour.getDistance():.2f}")
 ```
 
+### With Local Search (Recommended for Best Quality)
+
+```python
+colony = aco_solver.AntColony(graph, numAnts=30, alpha=1.0, beta=2.0, rho=0.5, Q=100.0)
+
+# Enable local search for better solution quality
+colony.setUseLocalSearch(True)       # Enable 2-opt/3-opt
+colony.setUse3Opt(True)               # Use both 2-opt and 3-opt (default)
+colony.setLocalSearchMode("best")     # Apply to best tour only (default)
+
+# Solve
+best_tour = colony.solve(100)
+print(f"Best distance: {best_tour.getDistance():.2f}")
+# Expected: ~7544-7607 for berlin52 (0.03-0.86% above optimal 7542)
+```
+
 ### With Progress Callback
 
 ```python
@@ -57,6 +73,26 @@ colony.setProgressCallback(progress_callback)
 colony.setCallbackInterval(10)  # Call every 10 iterations
 
 # Solve
+best_tour = colony.solve(100)
+```
+
+### With Multi-Threading Control
+
+```python
+colony = aco_solver.AntColony(graph, numAnts=30)
+
+# Enable OpenMP multi-threading (default)
+colony.setUseParallel(True)
+colony.setNumThreads(0)   # 0=auto-detect cores
+
+# Or force single-threaded
+colony.setUseParallel(False)
+colony.setNumThreads(1)
+
+# Or use specific thread count
+colony.setUseParallel(True)
+colony.setNumThreads(8)   # Use 8 threads
+
 best_tour = colony.solve(100)
 ```
 

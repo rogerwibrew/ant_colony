@@ -8,6 +8,7 @@
 #include "PheromoneMatrix.h"
 #include "Ant.h"
 #include "Tour.h"
+#include "LocalSearch.h"
 
 class AntColony {
 public:
@@ -50,6 +51,17 @@ public:
     // Only effective if OpenMP is available and useParallel is true
     void setNumThreads(int numThreads);
 
+    // Enable/disable local search optimization (default: disabled)
+    void setUseLocalSearch(bool useLocalSearch);
+
+    // Enable/disable 3-opt in addition to 2-opt (default: true)
+    // Only effective if local search is enabled
+    void setUse3Opt(bool use3opt);
+
+    // Set when to apply local search: "best" (only to best tour), "all" (to all ant tours), or "none" (disabled)
+    // Default: "best"
+    void setLocalSearchMode(const std::string& mode);
+
     // Get best solution found
     const Tour& getBestTour() const { return bestTour_; }
 
@@ -82,6 +94,14 @@ private:
     // Threading control
     bool useParallel_ = true;            // Enable parallel execution (if OpenMP available)
     int numThreads_ = 0;                 // Number of threads (0 = auto, 1 = serial, 2+ = specific)
+
+    // Local search control
+    bool useLocalSearch_ = false;        // Enable local search (2-opt/3-opt)
+    bool use3opt_ = true;                // Use 3-opt in addition to 2-opt
+    std::string localSearchMode_ = "best";  // "best", "all", or "none"
+
+    // Store constructed/improved tours for pheromone updates
+    std::vector<Tour> antTours_;         // Tours from each ant (possibly improved by local search)
 
     // Shared random number generator for colony
     static std::mt19937& getRandomGenerator();

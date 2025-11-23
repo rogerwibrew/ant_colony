@@ -48,6 +48,9 @@ export function AcoTspDashboard() {
     numAnts: number | null
     useConvergence: boolean
     convergenceIterations: number
+    useLocalSearch: boolean
+    use3Opt: boolean
+    localSearchMode: string
   }) => {
     // Map solverType to threading parameters
     let useParallel = true
@@ -73,6 +76,9 @@ export function AcoTspDashboard() {
       convergence_iterations: config.convergenceIterations,
       use_parallel: useParallel,
       num_threads: numThreads,
+      use_local_search: config.useLocalSearch,
+      use_3opt: config.use3Opt,
+      local_search_mode: config.localSearchMode,
     })
   }
 

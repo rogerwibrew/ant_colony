@@ -17,6 +17,9 @@ export interface SolveParams {
   convergence_iterations?: number
   use_parallel?: boolean       // Enable multi-threading
   num_threads?: number          // Number of threads (0=auto, 1=serial, 2+=specific)
+  use_local_search?: boolean    // Enable 2-opt/3-opt local search
+  use_3opt?: boolean            // Use both 2-opt and 3-opt
+  local_search_mode?: string    // When to apply local search (best, all, none)
 }
 
 export interface CityData {
@@ -125,19 +128,35 @@ export function useSocket(): UseSocketReturn {
       addLog(`Preview: ${data.benchmark} (${data.numCities} cities)`)
     })
 
-    socket.on("progress", (data: { iteration: number; bestDistance: number; bestTour: number[]; progress: number }) => {
+    socket.on("progress", (data: { iteration: number; bestDistance: number; bestTour: number[]; progress: number; elapsedTime?: number }) => {
       setCurrentIteration(data.iteration)
       setBestDistance(data.bestDistance)
       setBestTour(data.bestTour)
       setConvergenceData((prev) => [...prev, { iteration: data.iteration, length: data.bestDistance }])
-      addLog(`Iteration ${data.iteration}: Best = ${data.bestDistance.toFixed(2)} (${data.progress}%)`)
+
+      // Show iteration status without repeating distance (we have the graph for that)
+      const timeStr = data.elapsedTime ? ` [${data.elapsedTime.toFixed(1)}s]` : ''
+      addLog(`Running iteration ${data.iteration}...${timeStr}`)
     })
 
-    socket.on("complete", (data: { bestDistance: number; bestTour: number[]; totalIterations: number }) => {
+    socket.on("complete", (data: { bestDistance: number; bestTour: number[]; totalIterations: number; elapsedTime?: number; benchmark?: string; optimalDistance?: number; optimalityGap?: number }) => {
       setIsRunning(false)
       setBestDistance(data.bestDistance)
       setBestTour(data.bestTour)
-      addLog(`Completed: Best distance = ${data.bestDistance.toFixed(2)}`)
+
+      // Build completion message with solution quality
+      const timeStr = data.elapsedTime ? ` in ${data.elapsedTime.toFixed(2)}s` : ''
+      addLog(`✓ Optimization complete${timeStr}`)
+      addLog(`  Best distance: ${data.bestDistance.toFixed(2)}`)
+
+      if (data.optimalDistance && data.optimalityGap !== undefined) {
+        const gapStr = data.optimalityGap >= 0
+          ? `+${data.optimalityGap.toFixed(2)}%`
+          : `${data.optimalityGap.toFixed(2)}%`
+        addLog(`  Optimal: ${data.optimalDistance} (${gapStr} above optimal)`)
+      }
+
+      addLog(`  Total iterations: ${data.totalIterations}`)
     })
 
     socket.on("error", (data: { message: string }) => {
@@ -182,6 +201,14 @@ export function useSocket(): UseSocketReturn {
       addLog(`Threading: Multi-threaded (auto-detect)`)
     }
 
+    // Log local search configuration
+    if (params.use_local_search) {
+      const lsType = params.use_3opt ? "2-opt+3-opt" : "2-opt only"
+      addLog(`Local Search: Enabled (${lsType}, mode=${params.local_search_mode})`)
+    } else {
+      addLog(`Local Search: Disabled`)
+    }
+
     // Backend expects { benchmark, params: { alpha, beta, rho, ... } }
     const payload = {
       benchmark: params.benchmark,
@@ -196,6 +223,9 @@ export function useSocket(): UseSocketReturn {
         convergenceIterations: params.convergence_iterations,
         useParallel: params.use_parallel,
         numThreads: params.num_threads,
+        useLocalSearch: params.use_local_search,
+        use3Opt: params.use_3opt,
+        localSearchMode: params.local_search_mode,
       },
     }
     console.log("Emitting solve event:", payload)

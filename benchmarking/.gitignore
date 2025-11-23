@@ -1,0 +1,6 @@
+# Ignore benchmark result files (they can be large)
+results/*.csv
+results/*.md
+
+# Keep the directory structure
+!results/.gitkeep

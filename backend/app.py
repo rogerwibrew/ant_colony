@@ -94,7 +94,10 @@ def get_default_parameters():
             'rho': 'Evaporation rate (0-1, higher = faster evaporation)',
             'Q': 'Pheromone deposit factor',
             'useParallel': 'Enable multi-threaded execution (requires OpenMP)',
-            'numThreads': 'Number of threads (0=auto-detect, 1=serial, 2+=specific count)'
+            'numThreads': 'Number of threads (0=auto-detect, 1=serial, 2+=specific count)',
+            'useLocalSearch': 'Enable 2-opt/3-opt local search for better solution quality',
+            'use3Opt': 'Use both 2-opt and 3-opt (disable for 2-opt only)',
+            'localSearchMode': 'When to apply local search (best=best tour only, all=all ant tours, none=disabled)'
         }
     })
 

@@ -30,7 +30,10 @@ class Config:
         'rho': 0.5,
         'Q': 100.0,
         'useParallel': True,      # Enable multi-threading by default
-        'numThreads': 0           # 0 = auto-detect cores
+        'numThreads': 0,          # 0 = auto-detect cores
+        'useLocalSearch': False,  # Disable local search by default
+        'use3Opt': True,          # Use both 2-opt and 3-opt when local search enabled
+        'localSearchMode': 'best' # Apply to best tour only ('best', 'all', or 'none')
     }
 
     # Benchmark metadata (name, optimal distance, number of cities)

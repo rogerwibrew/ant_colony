@@ -20,6 +20,9 @@ interface ConfigurationPanelProps {
     numAnts: number | null
     useConvergence: boolean
     convergenceIterations: number
+    useLocalSearch: boolean
+    use3Opt: boolean
+    localSearchMode: string
   }) => void
   onPreview: (benchmark: string) => void
   isRunning: boolean
@@ -38,6 +41,9 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
   const [numAnts, setNumAnts] = useState(20)
   const [useConvergence, setUseConvergence] = useState(false)
   const [convergenceIterations, setConvergenceIterations] = useState(200)
+  const [useLocalSearch, setUseLocalSearch] = useState(false)
+  const [use3Opt, setUse3Opt] = useState(true)
+  const [localSearchMode, setLocalSearchMode] = useState("best")
 
   // Preview cities when problem changes
   const handleProblemChange = (newProblem: string) => {
@@ -61,7 +67,10 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
       iterations,
       numAnts: useDefaultAnts ? null : numAnts,
       useConvergence,
-      convergenceIterations
+      convergenceIterations,
+      useLocalSearch,
+      use3Opt,
+      localSearchMode
     })
   }
 
@@ -238,6 +247,51 @@ export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }:
               iterations
             </Label>
           </div>
+        </div>
+
+        {/* Local Search */}
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="useLocalSearch"
+              checked={useLocalSearch}
+              onChange={(e) => setUseLocalSearch(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="useLocalSearch" className="text-xs cursor-pointer">
+              Enable Local Search (2-opt/3-opt)
+            </Label>
+          </div>
+          {useLocalSearch && (
+            <div className="grid grid-cols-2 gap-2 pl-6">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="use3Opt"
+                  checked={use3Opt}
+                  onChange={(e) => setUse3Opt(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="use3Opt" className="text-xs cursor-pointer">
+                  Use 3-opt
+                </Label>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="localSearchMode" className="text-xs">Mode</Label>
+                <Select value={localSearchMode} onValueChange={setLocalSearchMode}>
+                  <SelectTrigger id="localSearchMode" className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="best">Best Tour</SelectItem>
+                    <SelectItem value="all">All Tours</SelectItem>
+                    <SelectItem value="none">Disabled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Solve Button */}

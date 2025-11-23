@@ -54,6 +54,8 @@ void AntColony::constructSolutions() {
 
     // Clear ants and recreate them
     ants_.clear();
+    antTours_.clear();
+    antTours_.resize(numAnts_);
 
     if (useDistinctStartCities_) {
         // Assign each ant to a different starting city
@@ -90,6 +92,19 @@ void AntColony::constructSolutions() {
 
             ant.visitCity(nextCity, graph_);
         }
+
+        // Complete tour and store it
+        if (ant.hasVisitedAll()) {
+            Tour tour = ant.completeTour(graph_);
+
+            // Apply local search if enabled and mode is "all" (skip for trivial cases)
+            if (useLocalSearch_ && localSearchMode_ == "all" && graph_.getNumCities() > 3) {
+                LocalSearch::improve(tour, graph_, use3opt_);
+            }
+
+            // Store the (possibly improved) tour for pheromone updates
+            antTours_[i] = tour;
+        }
     }
 }
 
@@ -97,20 +112,27 @@ void AntColony::updatePheromones() {
     // Evaporate pheromones
     pheromones_.evaporate(rho_);
 
-    // Deposit pheromones from all ants - parallelize this loop
+    // Deposit pheromones from all ants using stored tours (which may be improved by local search)
     // Use adaptive threading: cap threads at 2× ants to reduce atomic contention
     #ifdef _OPENMP
     int max_threads = omp_get_max_threads();
-    int effective_threads = std::min(max_threads, static_cast<int>(ants_.size()) * 2);
-    #pragma omp parallel for num_threads(effective_threads) if(useParallel_ && ants_.size() >= 8)
+    int effective_threads = std::min(max_threads, static_cast<int>(antTours_.size()) * 2);
+    #pragma omp parallel for num_threads(effective_threads) if(useParallel_ && antTours_.size() >= 8)
     #endif
-    for (size_t antIdx = 0; antIdx < ants_.size(); ++antIdx) {
-        if (!ants_[antIdx].hasVisitedAll()) {
-            continue; // Skip incomplete tours
+    for (size_t antIdx = 0; antIdx < antTours_.size(); ++antIdx) {
+        const Tour& tour = antTours_[antIdx];
+
+        // Skip invalid tours (but allow distance 0 for single-city case)
+        if (tour.getSequence().empty()) {
+            continue;
         }
 
-        Tour tour = ants_[antIdx].completeTour(graph_);
         double tourLength = tour.getDistance();
+
+        // Skip tours with zero distance (single city case)
+        if (tourLength <= 0.0) {
+            continue;
+        }
 
         // Pheromone deposit amount: Q / tourLength
         double depositAmount = Q_ / tourLength;
@@ -129,16 +151,16 @@ void AntColony::updatePheromones() {
 }
 
 void AntColony::runIteration() {
-    // Construct solutions
+    // Construct solutions (stores tours in antTours_)
     constructSolutions();
 
-    // Find best tour in this iteration
+    // Find best tour in this iteration from stored tours
     double iterationBest = std::numeric_limits<double>::max();
     Tour iterationBestTour;
 
-    // Process all ants to find the best - can be parallelized
+    // Process all stored tours to find the best - can be parallelized
     #ifdef _OPENMP
-    if (useParallel_ && ants_.size() >= 8) {
+    if (useParallel_ && antTours_.size() >= 8) {
         #pragma omp parallel
         {
             // Each thread tracks its own best
@@ -146,12 +168,14 @@ void AntColony::runIteration() {
             Tour threadBestTour;
 
             #pragma omp for nowait
-            for (size_t i = 0; i < ants_.size(); ++i) {
-                if (!ants_[i].hasVisitedAll()) {
+            for (size_t i = 0; i < antTours_.size(); ++i) {
+                const Tour& tour = antTours_[i];
+
+                // Skip invalid tours (but allow distance 0 for single-city case)
+                if (tour.getSequence().empty()) {
                     continue;
                 }
 
-                Tour tour = ants_[i].completeTour(graph_);
                 double tourLength = tour.getDistance();
 
                 if (tourLength < threadBest) {
@@ -175,12 +199,12 @@ void AntColony::runIteration() {
     } else {
     #endif
         // Serial version (no OpenMP or disabled)
-        for (auto& ant : ants_) {
-            if (!ant.hasVisitedAll()) {
+        for (const Tour& tour : antTours_) {
+            // Skip invalid tours (but allow distance 0 for single-city case)
+            if (tour.getSequence().empty()) {
                 continue;
             }
 
-            Tour tour = ant.completeTour(graph_);
             double tourLength = tour.getDistance();
 
             if (tourLength < iterationBest) {
@@ -197,10 +221,18 @@ void AntColony::runIteration() {
     }
     #endif
 
-    // Record iteration best
+    // Apply local search to best tour if enabled and mode is "best"
+    if (useLocalSearch_ && localSearchMode_ == "best") {
+        LocalSearch::improve(bestTour_, graph_, use3opt_);
+    }
+
+    // Record iteration best (use improved bestTour distance if local search was applied)
+    if (useLocalSearch_ && localSearchMode_ == "best" && bestTour_.getDistance() < iterationBest) {
+        iterationBest = bestTour_.getDistance();
+    }
     iterationBestDistances_.push_back(iterationBest);
 
-    // Update pheromones
+    // Update pheromones (uses antTours_ which may be improved by local search in mode "all")
     updatePheromones();
 }
 
@@ -275,4 +307,18 @@ void AntColony::setNumThreads(int numThreads) {
         omp_set_num_threads(numThreads);
     }
 #endif
+}
+
+void AntColony::setUseLocalSearch(bool useLocalSearch) {
+    useLocalSearch_ = useLocalSearch;
+}
+
+void AntColony::setUse3Opt(bool use3opt) {
+    use3opt_ = use3opt;
+}
+
+void AntColony::setLocalSearchMode(const std::string& mode) {
+    if (mode == "best" || mode == "all" || mode == "none") {
+        localSearchMode_ = mode;
+    }
 }

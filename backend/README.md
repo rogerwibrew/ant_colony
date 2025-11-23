@@ -192,7 +192,12 @@ Start solving a TSP problem.
     "rho": 0.5,
     "Q": 100.0,
     "useConvergence": false,  // true to use convergence mode
-    "convergenceIterations": 200  // stop after N iterations without improvement
+    "convergenceIterations": 200,  // stop after N iterations without improvement
+    "useParallel": true,    // enable OpenMP multi-threading
+    "numThreads": 0,        // 0=auto-detect, 1=serial, 2+=specific count
+    "useLocalSearch": false, // enable 2-opt/3-opt local search
+    "use3Opt": true,        // use both 2-opt and 3-opt when LS enabled
+    "localSearchMode": "best" // when to apply: "best", "all", or "none"
   }
 }
 ```
@@ -267,13 +272,15 @@ Sent when optimization completes.
 **Payload:**
 ```json
 {
-  "bestDistance": 7906.23,
+  "bestDistance": 7544.37,
   "bestTour": [0, 15, 23, 8, 42, ...],
-  "convergenceHistory": [12450.5, ..., 7906.23],
+  "convergenceHistory": [12450.5, ..., 7544.37],
   "cities": [[565.0, 575.0], ...],
   "elapsedTime": 4.52,
   "totalIterations": 100,
-  "benchmark": "berlin52.tsp"
+  "benchmark": "berlin52.tsp",
+  "optimalDistance": 7542,
+  "optimalityGap": 0.03
 }
 ```
 
