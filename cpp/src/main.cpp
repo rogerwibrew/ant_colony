@@ -14,15 +14,22 @@
 #include "Graph.h"
 #include "Tour.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " <input_file> [options]\n";
-    std::cout << "\nOptions:\n";
+    std::cout << "\nAlgorithm Options:\n";
     std::cout << "  --ants <n>       Number of ants (default: number of cities)\n";
     std::cout << "  --iterations <n> Number of iterations (default: until no improvement for 200 iterations)\n";
     std::cout << "  --alpha <f>      Pheromone importance (default: 1.0)\n";
     std::cout << "  --beta <f>       Heuristic importance (default: 2.0)\n";
     std::cout << "  --rho <f>        Evaporation rate (default: 0.5)\n";
     std::cout << "  --Q <f>          Pheromone deposit factor (default: 100.0)\n";
+    std::cout << "\nThreading Options:\n";
+    std::cout << "  --threads <n>    Number of threads (0=auto, 1=serial, 2+=specific, default: 0)\n";
+    std::cout << "  --serial         Force single-threaded execution (same as --threads 1)\n";
     std::cout << "\nInput file format:\n";
     std::cout << "  Coordinate format: n\\n id x y\\n ...\n";
     std::cout << "  Distance matrix format: n\\n d00 d01 ...\\n d10 d11 ...\\n ...\n";
@@ -48,6 +55,8 @@ int main(int argc, char** argv) {
     double beta = 2.0;
     double rho = 0.5;
     double Q = 100.0;
+    int numThreads = 0;  // 0 = auto-detect, 1 = serial, 2+ = specific count
+    bool useParallel = true;  // Enable parallel execution by default (if OpenMP available)
 
     // Parse command-line arguments
     if (argc < 2) {
@@ -58,14 +67,25 @@ int main(int argc, char** argv) {
     inputFile = argv[1];
 
     // Parse optional arguments
-    for (int i = 2; i < argc; i += 2) {
+    for (int i = 2; i < argc; ) {
+        std::string option = argv[i];
+
+        // Handle --serial flag (no argument)
+        if (option == "--serial") {
+            numThreads = 1;
+            useParallel = false;
+            i++;
+            continue;
+        }
+
+        // All other options require a value
         if (i + 1 >= argc) {
             std::cerr << "Error: Missing value for option " << argv[i] << std::endl;
             return 1;
         }
 
-        std::string option = argv[i];
         std::string value = argv[i + 1];
+        i += 2;
 
         try {
             if (option == "--ants") {
@@ -103,6 +123,15 @@ int main(int argc, char** argv) {
                 if (Q <= 0.0) {
                     std::cerr << "Error: Q must be positive" << std::endl;
                     return 1;
+                }
+            } else if (option == "--threads") {
+                numThreads = std::stoi(value);
+                if (numThreads < 0) {
+                    std::cerr << "Error: Number of threads must be non-negative" << std::endl;
+                    return 1;
+                }
+                if (numThreads == 1) {
+                    useParallel = false;
                 }
             } else {
                 std::cerr << "Error: Unknown option " << option << std::endl;
@@ -155,11 +184,28 @@ int main(int argc, char** argv) {
     std::cout << "  Alpha (pheromone):    " << alpha << "\n";
     std::cout << "  Beta (heuristic):     " << beta << "\n";
     std::cout << "  Rho (evaporation):    " << rho << "\n";
-    std::cout << "  Q (deposit factor):   " << Q << "\n\n";
+    std::cout << "  Q (deposit factor):   " << Q << "\n";
+    std::cout << "  Threading:            ";
+#ifdef _OPENMP
+    if (!useParallel || numThreads == 1) {
+        std::cout << "Serial (single-threaded)\n";
+    } else if (numThreads == 0) {
+        std::cout << omp_get_max_threads() << " threads (auto-detected)\n";
+    } else {
+        std::cout << numThreads << " threads\n";
+    }
+#else
+    std::cout << "Serial (OpenMP not available)\n";
+#endif
+    std::cout << "\n";
 
     // Initialize and run ACO
     std::cout << "Running Ant Colony Optimization...\n";
     AntColony colony(graph, numAnts, alpha, beta, rho, Q, useDistinctStartCities);
+
+    // Configure threading
+    colony.setUseParallel(useParallel);
+    colony.setNumThreads(numThreads);
 
     // Progress callback to show updates every 10 iterations
     int lastReportedIteration = 0;

@@ -346,3 +346,106 @@ TEST(AntColonyTest, SolutionImprovement) {
     // Later iterations should generally have better (lower) distances
     EXPECT_LE(lateAvg, earlyAvg);
 }
+
+// ============================================================================
+// Threading Tests (OpenMP)
+// ============================================================================
+
+// Test threading control methods exist and can be called
+TEST(AntColonyTest, ThreadingControlMethods) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    // These methods should not crash
+    colony.setUseParallel(true);
+    colony.setUseParallel(false);
+    colony.setNumThreads(0);  // Auto
+    colony.setNumThreads(1);  // Serial
+    colony.setNumThreads(4);  // Specific count
+
+    SUCCEED();  // If we got here, methods work
+}
+
+// Test serial execution (explicitly disabled parallel)
+TEST(AntColonyTest, SerialExecution) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseParallel(false);
+    colony.setNumThreads(1);
+
+    Tour bestTour = colony.solve(10);
+
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+    EXPECT_EQ(bestTour.getSequence().size(), 4);
+    EXPECT_TRUE(bestTour.validate(4));
+}
+
+// Test parallel execution (explicitly enabled)
+TEST(AntColonyTest, ParallelExecution) {
+    Graph graph = createSquareGraph();
+    AntColony colony(graph, 20, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setUseParallel(true);
+    colony.setNumThreads(4);
+
+    Tour bestTour = colony.solve(10);
+
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+    EXPECT_EQ(bestTour.getSequence().size(), 4);
+    EXPECT_TRUE(bestTour.validate(4));
+}
+
+// Test that both serial and parallel produce valid results
+TEST(AntColonyTest, SerialParallelBothValid) {
+    Graph graph = createTriangleGraph();
+
+    // Serial run
+    AntColony serialColony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+    serialColony.setUseParallel(false);
+    Tour serialTour = serialColony.solve(20);
+
+    // Parallel run
+    AntColony parallelColony(graph, 15, 1.0, 2.0, 0.5, 100.0);
+    parallelColony.setUseParallel(true);
+    parallelColony.setNumThreads(4);
+    Tour parallelTour = parallelColony.solve(20);
+
+    // Both should produce valid tours
+    EXPECT_TRUE(serialTour.validate(3));
+    EXPECT_TRUE(parallelTour.validate(3));
+
+    // Both should find reasonable solutions (within 2× of each other)
+    double ratio = serialTour.getDistance() / parallelTour.getDistance();
+    EXPECT_GT(ratio, 0.5);  // Neither should be more than 2× worse
+    EXPECT_LT(ratio, 2.0);
+}
+
+// Test different thread counts all work
+TEST(AntColonyTest, VariousThreadCounts) {
+    Graph graph = createSquareGraph();
+
+    // Test with 1, 2, 4 threads
+    for (int numThreads : {1, 2, 4}) {
+        AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+        colony.setNumThreads(numThreads);
+
+        Tour bestTour = colony.solve(5);
+
+        EXPECT_GT(bestTour.getDistance(), 0.0) << "Failed with " << numThreads << " threads";
+        EXPECT_TRUE(bestTour.validate(4)) << "Invalid tour with " << numThreads << " threads";
+    }
+}
+
+// Test auto thread detection (numThreads = 0)
+TEST(AntColonyTest, AutoThreadDetection) {
+    Graph graph = createTriangleGraph();
+    AntColony colony(graph, 10, 1.0, 2.0, 0.5, 100.0);
+
+    colony.setNumThreads(0);  // Auto-detect
+
+    Tour bestTour = colony.solve(10);
+
+    EXPECT_TRUE(bestTour.validate(3));
+    EXPECT_GT(bestTour.getDistance(), 0.0);
+}

@@ -28,7 +28,9 @@ class Config:
         'alpha': 1.0,
         'beta': 2.0,
         'rho': 0.5,
-        'Q': 100.0
+        'Q': 100.0,
+        'useParallel': True,      # Enable multi-threading by default
+        'numThreads': 0           # 0 = auto-detect cores
     }
 
     # Benchmark metadata (name, optimal distance, number of cities)

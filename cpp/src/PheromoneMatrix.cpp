@@ -38,9 +38,17 @@ void PheromoneMatrix::evaporate(double rho) {
 }
 
 void PheromoneMatrix::depositPheromone(int cityA, int cityB, double amount) {
+    // Use atomic operations for thread safety when multiple ants may update same edge
+    #ifdef _OPENMP
+    #pragma omp atomic
+    #endif
     pheromones_[cityA][cityB] += amount;
+
     // Keep matrix symmetric for undirected TSP (only if different cities)
     if (cityA != cityB) {
+        #ifdef _OPENMP
+        #pragma omp atomic
+        #endif
         pheromones_[cityB][cityA] += amount;
     }
 }

@@ -92,7 +92,9 @@ def get_default_parameters():
             'alpha': 'Pheromone importance factor (higher = more pheromone influence)',
             'beta': 'Heuristic importance factor (higher = more distance influence)',
             'rho': 'Evaporation rate (0-1, higher = faster evaporation)',
-            'Q': 'Pheromone deposit factor'
+            'Q': 'Pheromone deposit factor',
+            'useParallel': 'Enable multi-threaded execution (requires OpenMP)',
+            'numThreads': 'Number of threads (0=auto-detect, 1=serial, 2+=specific count)'
         }
     })
 

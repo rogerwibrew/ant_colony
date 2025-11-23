@@ -3,6 +3,17 @@
 #include <random>
 #include <algorithm>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+// Shared random number generator for AntColony
+std::mt19937& AntColony::getRandomGenerator() {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    return gen;
+}
+
 AntColony::AntColony(const Graph& graph, int numAnts, double alpha, double beta,
                      double rho, double Q, bool useDistinctStartCities)
     : graph_(graph),
@@ -54,18 +65,21 @@ void AntColony::constructSolutions() {
         }
     } else {
         // Create ants starting from random cities
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
         std::uniform_int_distribution<> dist(0, numCities - 1);
 
         for (int i = 0; i < numAnts_; ++i) {
-            int startCity = dist(gen);
+            int startCity = dist(getRandomGenerator());
             ants_.emplace_back(startCity, numCities);
         }
     }
 
     // Each ant constructs a complete tour
-    for (auto& ant : ants_) {
+    // Parallelize this loop - each ant operates independently
+    #ifdef _OPENMP
+    #pragma omp parallel for schedule(dynamic) if(useParallel_ && numAnts_ >= 8)
+    #endif
+    for (int i = 0; i < numAnts_; ++i) {
+        Ant& ant = ants_[i];
         while (!ant.hasVisitedAll()) {
             int nextCity = ant.selectNextCity(graph_, pheromones_, alpha_, beta_);
 
@@ -83,13 +97,19 @@ void AntColony::updatePheromones() {
     // Evaporate pheromones
     pheromones_.evaporate(rho_);
 
-    // Deposit pheromones from all ants
-    for (auto& ant : ants_) {
-        if (!ant.hasVisitedAll()) {
+    // Deposit pheromones from all ants - parallelize this loop
+    // Use adaptive threading: cap threads at 2× ants to reduce atomic contention
+    #ifdef _OPENMP
+    int max_threads = omp_get_max_threads();
+    int effective_threads = std::min(max_threads, static_cast<int>(ants_.size()) * 2);
+    #pragma omp parallel for num_threads(effective_threads) if(useParallel_ && ants_.size() >= 8)
+    #endif
+    for (size_t antIdx = 0; antIdx < ants_.size(); ++antIdx) {
+        if (!ants_[antIdx].hasVisitedAll()) {
             continue; // Skip incomplete tours
         }
 
-        Tour tour = ant.completeTour(graph_);
+        Tour tour = ants_[antIdx].completeTour(graph_);
         double tourLength = tour.getDistance();
 
         // Pheromone deposit amount: Q / tourLength
@@ -98,6 +118,7 @@ void AntColony::updatePheromones() {
         const std::vector<int>& tourSequence = tour.getSequence();
 
         // Deposit pheromones on each edge in the tour
+        // depositPheromone already uses atomic operations for thread safety
         for (size_t i = 0; i < tourSequence.size(); ++i) {
             int cityA = tourSequence[i];
             int cityB = tourSequence[(i + 1) % tourSequence.size()]; // Wrap around to start
@@ -113,24 +134,68 @@ void AntColony::runIteration() {
 
     // Find best tour in this iteration
     double iterationBest = std::numeric_limits<double>::max();
+    Tour iterationBestTour;
 
-    for (auto& ant : ants_) {
-        if (!ant.hasVisitedAll()) {
-            continue;
+    // Process all ants to find the best - can be parallelized
+    #ifdef _OPENMP
+    if (useParallel_ && ants_.size() >= 8) {
+        #pragma omp parallel
+        {
+            // Each thread tracks its own best
+            double threadBest = std::numeric_limits<double>::max();
+            Tour threadBestTour;
+
+            #pragma omp for nowait
+            for (size_t i = 0; i < ants_.size(); ++i) {
+                if (!ants_[i].hasVisitedAll()) {
+                    continue;
+                }
+
+                Tour tour = ants_[i].completeTour(graph_);
+                double tourLength = tour.getDistance();
+
+                if (tourLength < threadBest) {
+                    threadBest = tourLength;
+                    threadBestTour = tour;
+                }
+            }
+
+            // Merge thread results into global best
+            #pragma omp critical
+            {
+                if (threadBest < iterationBest) {
+                    iterationBest = threadBest;
+                    iterationBestTour = threadBestTour;
+                }
+                if (threadBest < bestTour_.getDistance()) {
+                    bestTour_ = threadBestTour;
+                }
+            }
         }
+    } else {
+    #endif
+        // Serial version (no OpenMP or disabled)
+        for (auto& ant : ants_) {
+            if (!ant.hasVisitedAll()) {
+                continue;
+            }
 
-        Tour tour = ant.completeTour(graph_);
-        double tourLength = tour.getDistance();
+            Tour tour = ant.completeTour(graph_);
+            double tourLength = tour.getDistance();
 
-        if (tourLength < iterationBest) {
-            iterationBest = tourLength;
+            if (tourLength < iterationBest) {
+                iterationBest = tourLength;
+                iterationBestTour = tour;
+            }
+
+            // Update global best
+            if (tourLength < bestTour_.getDistance()) {
+                bestTour_ = tour;
+            }
         }
-
-        // Update global best
-        if (tourLength < bestTour_.getDistance()) {
-            bestTour_ = tour;
-        }
+    #ifdef _OPENMP
     }
+    #endif
 
     // Record iteration best
     iterationBestDistances_.push_back(iterationBest);
@@ -197,4 +262,17 @@ void AntColony::setCallbackInterval(int interval) {
 
 void AntColony::setConvergenceThreshold(int threshold) {
     convergenceThreshold_ = threshold;
+}
+
+void AntColony::setUseParallel(bool useParallel) {
+    useParallel_ = useParallel;
+}
+
+void AntColony::setNumThreads(int numThreads) {
+    numThreads_ = numThreads;
+#ifdef _OPENMP
+    if (numThreads > 0) {
+        omp_set_num_threads(numThreads);
+    }
+#endif
 }

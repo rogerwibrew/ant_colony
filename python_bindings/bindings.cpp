@@ -216,6 +216,17 @@ PYBIND11_MODULE(aco_solver, m) {
         .def("setConvergenceThreshold", &AntColony::setConvergenceThreshold,
              py::arg("threshold"),
              "Set convergence threshold (default: 200 iterations without improvement)")
+        .def("setUseParallel", &AntColony::setUseParallel,
+             py::arg("useParallel"),
+             "Enable/disable parallel execution (default: True if OpenMP available)\n\n"
+             "Parameters:\n"
+             "  useParallel: True to enable multi-threading, False for serial execution")
+        .def("setNumThreads", &AntColony::setNumThreads,
+             py::arg("numThreads"),
+             "Set number of threads for parallel execution\n\n"
+             "Parameters:\n"
+             "  numThreads: 0=auto-detect, 1=serial, 2+=specific thread count\n\n"
+             "Note: Only effective if OpenMP is available and useParallel is True")
         .def("getNumAnts", &AntColony::getNumAnts,
              "Get number of ants")
         .def("getAlpha", &AntColony::getAlpha,

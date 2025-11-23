@@ -49,6 +49,19 @@ export function AcoTspDashboard() {
     useConvergence: boolean
     convergenceIterations: number
   }) => {
+    // Map solverType to threading parameters
+    let useParallel = true
+    let numThreads = 0  // auto-detect by default
+
+    if (config.solverType === "single-thread") {
+      useParallel = false
+      numThreads = 1
+    } else if (config.solverType === "multi-thread") {
+      useParallel = true
+      numThreads = 0  // auto-detect
+    }
+    // GPU is future work, treat as multi-thread for now
+
     solve({
       benchmark: config.problem,
       alpha: config.alpha,
@@ -58,6 +71,8 @@ export function AcoTspDashboard() {
       num_ants: config.numAnts,
       use_convergence: config.useConvergence,
       convergence_iterations: config.convergenceIterations,
+      use_parallel: useParallel,
+      num_threads: numThreads,
     })
   }
 

@@ -23,7 +23,8 @@ static std::string findFile(const std::string& filename) {
         filename,                    // Current directory or absolute path
         "data/" + filename,          // data/ subdirectory
         "../data/" + filename,       // data/ from build directory
-        "../../data/" + filename,    // data/ from build/bin directory
+        "../../data/" + filename,    // data/ from build/bin directory (pre-restructure)
+        "../../../data/" + filename, // data/ from cpp/build/bin directory (post-restructure)
         "tests/data/" + filename,    // tests/data/ subdirectory
         "../tests/data/" + filename, // tests/data/ from build directory
         "../../tests/data/" + filename  // tests/data/ from build/bin directory

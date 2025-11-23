@@ -8,16 +8,16 @@ working with code in this repository.
 C++17 Ant Colony Optimization (ACO) implementation for Travelling
 Salesman Problem using CMake and Google Test.
 
-**Current Status:** ✅ **FULLY IMPLEMENTED** - 106 tests passing.
+**Current Status:** ✅ **FULLY IMPLEMENTED** - 112 tests passing.
 All core classes complete and working. Production-ready ACO solver
-with CLI interface and TSPLIB format support.
+with CLI interface, TSPLIB format support, and OpenMP multi-threading.
 
 ## Roadmap / Planned Tasks
 
 1. **Improve UI** - 🚧 In progress: Preview feature, convergence
    stopping, ant controls, visualization improvements
-2. **Multi-core CPU support** - Integrate parallel processing using
-   multiple CPU cores (separate branch)
+2. ✅ **Multi-core CPU support** - OpenMP parallelization integrated
+   (10-12× speedup on 32 cores, runtime control via CLI/Python/Web UI)
 3. **GPU acceleration** - Integrate GPU operations for performance
 4. **Additional solution methods** - Add elite ant and other ACO
    variants
@@ -85,7 +85,7 @@ make stop
 ### Test
 
 ```bash
-# Run all tests (106 passing)
+# Run all tests (112 passing)
 ./cpp/build/bin/ant_colony_tests
 
 # Use CTest (recommended - shows which tests fail)
@@ -114,6 +114,11 @@ cd cpp/build/bin
 # With custom parameters
 ./ant_colony_tsp ulysses16.tsp --ants 50 --iterations 200 --alpha 1.5 --beta 3.0
 
+# Threading options (OpenMP multi-core support)
+./ant_colony_tsp berlin52.tsp --threads 8      # Use 8 threads
+./ant_colony_tsp berlin52.tsp --serial         # Force single-threaded
+# Default: Auto-detect cores (multi-threaded)
+
 # Show help
 ./ant_colony_tsp --help
 
@@ -121,9 +126,11 @@ cd cpp/build/bin
 cd cpp/build && ./bin/ant_colony_tsp berlin52.tsp
 ```
 
-**Note:** TSPLoader automatically searches for files in `data/`,
-`../data/`, and `../../data/`, so you can run from any directory
-without specifying the full path.
+**Note:** TSPLoader automatically searches for files in common
+locations (`data/`, `../data/`, `../../data/`, `../../../data/`), so
+you can run from any directory without specifying the full path. This
+supports both the original flat structure and the current `cpp/`
+subdirectory organization.
 
 ## Architecture Overview
 
@@ -140,8 +147,8 @@ without specifying the full path.
   evaporation and deposit
 - ✅ **Ant** (21 tests) - Solution construction agent with
   probabilistic city selection
-- ✅ **AntColony** (23 tests) - Main algorithm coordinator with
-  convergence tracking
+- ✅ **AntColony** (29 tests) - Main algorithm coordinator with
+  convergence tracking and OpenMP parallelization
 - ✅ **main.cpp** - Full CLI with parameter customization and
   formatted output
 
@@ -204,8 +211,9 @@ backend/          - Flask API with WebSocket support
   ├── app.py             - Main Flask application
   └── requirements.txt   - Python dependencies
 frontend/         - Next.js web interface
-  ├── app/               - Next.js App Router pages
-  ├── components/        - React components
+  ├── src/
+  │   ├── app/           - Next.js App Router pages
+  │   └── components/    - React components
   └── package.json       - npm dependencies
 Makefile          - Quick commands for web development (start/stop/install)
 ```
@@ -486,6 +494,8 @@ algorithm execution.
 - `double Q_` - Pheromone deposit factor
 - `Tour bestTour_` - Best tour found so far
 - `std::vector<double> iterationBestDistances_` - Track convergence
+- `bool useParallel_` - Enable/disable parallel execution (default: true if OpenMP available)
+- `int numThreads_` - Thread count control (0=auto-detect, 1=serial, 2+=specific)
 
 **Methods:**
 
@@ -504,6 +514,10 @@ algorithm execution.
   iteration history
 - `void setProgressCallback(callback, interval)` - Set callback
   function for progress updates (Python bindings)
+- `void setUseParallel(bool useParallel)` - Enable/disable OpenMP
+  multi-threading (default: true if available)
+- `void setNumThreads(int numThreads)` - Set thread count (0=auto-detect,
+  1=serial, 2+=specific count)
 
 **Dependencies:** Graph, PheromoneMatrix, Ant, Tour
 
@@ -516,6 +530,14 @@ algorithm execution.
 - Consider elitist strategy (only best ant deposits pheromones)
 - **Convergence-based stopping:** If `convergenceIterations`
   specified, solver stops early when no improvement for N iterations
+- **OpenMP Parallelization:** When OpenMP is available, achieves 10-12×
+  speedup on multi-core CPUs through:
+  - Parallel ant tour construction with dynamic scheduling
+  - Parallel pheromone evaporation with loop collapsing
+  - Thread-safe pheromone deposition using atomic operations
+  - Adaptive threading to reduce contention on atomic updates
+  - Parallel best tour finding with thread-local reduction
+  - Graceful fallback to serial execution if OpenMP unavailable
 
 ---
 
@@ -547,7 +569,8 @@ matrix, or TSPLIB format).
 
 - Auto-detection: Checks for "NAME:", "TYPE:", "DIMENSION:" (TSPLIB),
   3 fields → coordinates, >3 fields → matrix
-- Auto-searches paths: current dir, `data/`, `../data/`, `../../data/`
+- Auto-searches paths: current dir, `data/`, `../data/`, `../../data/`,
+  `../../../data/` (supports both flat and `cpp/` subdirectory structures)
 - Returns empty Graph on error (check with `graph.isValid()`)
 - TSPLIB: Only EUC_2D edge weight type currently supported
 
@@ -834,6 +857,25 @@ best_tour = colony.solve(100)
 print(f"Best distance: {best_tour.getDistance():.2f}")
 ```
 
+### Threading Control
+
+```python
+# Control multi-threading behavior
+colony.setUseParallel(True)   # Enable OpenMP multi-threading (default)
+colony.setNumThreads(0)        # 0=auto-detect cores, 1=serial, 2+=specific count
+best_tour = colony.solve(100)
+
+# Force single-threaded execution
+colony.setUseParallel(False)
+colony.setNumThreads(1)
+best_tour = colony.solve(100)
+
+# Use specific number of threads
+colony.setUseParallel(True)
+colony.setNumThreads(8)        # Use 8 threads
+best_tour = colony.solve(100)
+```
+
 ### Progress Callbacks
 
 ```python
@@ -848,6 +890,7 @@ best_tour = colony.solve(100)
 **Key Features:**
 
 - Releases GIL during C++ computation (allows concurrent Python operations)
+- Full OpenMP multi-threading support with runtime control
 - Real-time progress callbacks from C++
 - 10-15% overhead vs pure C++ CLI
 - All C++ classes exposed: City, Graph, Tour, TSPLoader, AntColony
@@ -857,15 +900,146 @@ best_tour = colony.solve(100)
 
 ## Future Enhancements
 
-- Support for ATT, GEO, and EXPLICIT edge weight types
-- Elitist pheromone update strategy
-- 2-opt/3-opt local search
-- Parallel ant execution
-- Adaptive parameters (dynamic alpha, beta, rho)
-- Export results to file (CSV, JSON)
-- Additional benchmark problems in web UI dropdown
-- Path animation playback
-- Comparison mode (run multiple configurations side-by-side)
+This section outlines planned improvements organized by priority and
+expected impact.
+
+### High Priority
+
+**1. Multi-core Parallelization** - ✅ **COMPLETE**
+- **Status:** Integrated using OpenMP
+- **Performance:** 10-12× speedup on 32-core CPUs
+- **Features:** Runtime control via CLI/Python/Web UI, adaptive threading,
+  graceful fallback
+- **See:** [cpu_parallel.md](cpu_parallel.md) and [INTEGRATION_SUMMARY.md](INTEGRATION_SUMMARY.md)
+
+**2. 2-opt/3-opt Local Search** - ⭐⭐⭐⭐⭐
+- **Impact:** Biggest solution quality improvement (typically 5-15%
+  better results)
+- **Implementation:** Post-process tours with edge-swap optimization
+- **Complexity:** Medium
+- **Notes:** Can be applied to best tour found or to all tours before
+  pheromone update. Classic TSP technique with proven results.
+
+**3. Additional TSPLIB Formats** - ⭐⭐⭐⭐
+- **Support for ATT** (pseudo-Euclidean distance)
+- **Support for GEO** (geographical coordinates with latitude/longitude)
+- **Support for EXPLICIT** (pre-computed distance matrices)
+- **Impact:** Enables solving all TSPLIB95 benchmark problems
+- **Complexity:** Low-Medium
+- **Notes:** Currently only EUC_2D is supported. Adding these formats
+  unlocks 40+ additional benchmark problems.
+
+### Medium Priority
+
+**4. Elitist Pheromone Strategy** - ⭐⭐⭐⭐
+- **Impact:** Improved convergence and solution quality
+- **Implementation:** Only best-so-far ant deposits pheromones (or
+  weighted combination)
+- **Complexity:** Low
+- **Notes:** Simple modification to `updatePheromones()` method.
+  Classic ACO variant with good empirical results.
+
+**5. MAX-MIN Ant System (MMAS)** - ⭐⭐⭐⭐
+- **Impact:** Prevents premature convergence, more robust algorithm
+- **Implementation:** Enforce pheromone bounds, use
+  `clampPheromones()` method
+- **Complexity:** Low
+- **Notes:** Framework already exists in PheromoneMatrix class.
+  Just needs to enable bounds and add dynamic bound calculation.
+
+**6. Export Results (CSV/JSON)** - ⭐⭐⭐
+- **Impact:** User-requested feature for analysis and comparison
+- **Implementation:** Add `--output` flag to CLI, export tour sequence
+  and convergence data
+- **Complexity:** Low
+- **Formats:**
+  - CSV: iteration, best_distance, current_iteration_best
+  - JSON: full solution with metadata, parameters, timing
+
+**7. Web UI Enhancements** - ⭐⭐⭐
+- Additional benchmark problems in dropdown (currently ~20, expand
+  to all 113+ EUC_2D files)
+- Path animation playback (step through optimization history)
+- Side-by-side comparison mode (run multiple parameter sets
+  simultaneously)
+- Solution quality indicator (% above known optimal)
+
+### Low Priority
+
+**8. Adaptive Parameters** - ⭐⭐⭐
+- **Impact:** Automatic parameter tuning, better out-of-the-box
+  performance
+- **Implementation:** Dynamic adjustment of alpha, beta, rho based on
+  convergence metrics
+- **Complexity:** High
+- **Notes:** Research-level feature. Requires careful design to avoid
+  instability.
+
+**9. GPU Acceleration** - ⭐⭐
+- **Impact:** Massive speedup for very large problems (1000+ cities)
+- **Implementation:** CUDA/OpenCL for parallel probability calculations
+- **Complexity:** Very High
+- **Notes:** Most beneficial for probability calculation in
+  `selectNextCity()`. Requires significant refactoring.
+
+**10. Additional ACO Variants** - ⭐⭐
+- **Ant Colony System (ACS):** Pseudo-random proportional rule,
+  local pheromone update
+- **Rank-Based Ant System:** Only top-k ants deposit pheromones
+- **Complexity:** Medium per variant
+- **Notes:** Academic interest, incremental improvements over base ACO
+
+### Research/Experimental
+
+**11. Hybrid Approaches**
+- Combine ACO with genetic algorithms
+- Integration with simulated annealing
+- Machine learning for parameter selection
+
+**12. Dynamic TSP**
+- Support for time-varying edge weights
+- Real-time re-optimization as problem changes
+
+**13. Multi-objective Optimization**
+- Optimize for multiple criteria (distance, time, cost)
+- Pareto frontier exploration
+
+---
+
+### Implementation Notes
+
+- **Performance profiling recommended** before GPU work (verify
+  selectNextCity is still the bottleneck)
+- **Backward compatibility:** New features should not break existing
+  API or file formats
+- **Testing required:** Each enhancement should add corresponding test
+  cases
+- **Documentation:** Update CLAUDE.md and README.md when adding features
+
+---
+
+## Recent Improvements
+
+**OpenMP Multi-Threading Integration (2025-11-23):**
+- ✅ Integrated OpenMP parallelization from openmp-parallel branch into master
+- ✅ **10-12× performance improvement** on multi-core CPUs (tested on 32-core system)
+- ✅ Full-stack threading control: CLI (`--threads`, `--serial`), Python bindings (`setUseParallel()`, `setNumThreads()`), Web UI (dropdown)
+- ✅ Graceful fallback to serial execution if OpenMP unavailable
+- ✅ Added 6 new threading-specific tests (112 tests total, all passing)
+- ✅ Thread-safe pheromone updates with atomic operations
+- ✅ Adaptive threading to prevent contention on pheromone deposits
+- ✅ Parallel ant tour construction with dynamic scheduling
+- See [INTEGRATION_SUMMARY.md](INTEGRATION_SUMMARY.md) and [cpu_parallel.md](cpu_parallel.md) for details
+
+**Code Quality Improvements (2025-11-23):**
+- Fixed static RNG issue: Consolidated multiple static random
+  generators into shared class methods (Ant.cpp, AntColony.cpp)
+- Extracted magic numbers: Added `EPSILON_DISTANCE` constant for
+  division-by-zero protection (Ant.h)
+- Updated documentation paths: Corrected frontend structure in file
+  organization section
+- Fixed TSPLoader path resolution: Added `../../../data/` search path
+  to support cpp/ subdirectory structure (TSPLoader.cpp:27)
 
 ## References
 

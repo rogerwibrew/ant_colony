@@ -4,6 +4,13 @@
 #include <algorithm>
 #include <stdexcept>
 
+// Shared random number generator for all Ant instances
+std::mt19937& Ant::getRandomGenerator() {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    return gen;
+}
+
 Ant::Ant(int startCity, int numCities)
     : currentCity_(startCity),
       visited_(numCities, false),
@@ -49,7 +56,7 @@ int Ant::selectNextCity(const Graph& graph, const PheromoneMatrix& pheromones,
 
         // Avoid division by zero
         if (distance == 0.0) {
-            distance = 1e-10;
+            distance = EPSILON_DISTANCE;
         }
 
         double heuristic = 1.0 / distance;
@@ -64,10 +71,8 @@ int Ant::selectNextCity(const Graph& graph, const PheromoneMatrix& pheromones,
     // Handle edge case where all probabilities are 0
     if (totalProbability == 0.0) {
         // Select randomly
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
         std::uniform_int_distribution<> dist(0, unvisited.size() - 1);
-        return unvisited[dist(gen)];
+        return unvisited[dist(getRandomGenerator())];
     }
 
     // Normalize probabilities
@@ -76,10 +81,8 @@ int Ant::selectNextCity(const Graph& graph, const PheromoneMatrix& pheromones,
     }
 
     // Roulette wheel selection
-    static std::random_device rd;
-    static std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0.0, 1.0);
-    double random = dist(gen);
+    double random = dist(getRandomGenerator());
 
     double cumulativeProbability = 0.0;
     for (size_t i = 0; i < unvisited.size(); ++i) {

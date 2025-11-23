@@ -29,7 +29,7 @@ interface ConfigurationPanelProps {
 export function ConfigurationPanel({ onSolve, onPreview, isRunning, statusLog }: ConfigurationPanelProps) {
   const [problem, setProblem] = useState("berlin52.tsp")
   const [method, setMethod] = useState("traditional")
-  const [solverType, setSolverType] = useState("single-thread")
+  const [solverType, setSolverType] = useState("multi-thread")  // Default to multi-threaded
   const [rho, setRho] = useState(0.5)
   const [alpha, setAlpha] = useState(1.0)
   const [beta, setBeta] = useState(2.0)

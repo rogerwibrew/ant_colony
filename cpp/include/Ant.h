@@ -2,12 +2,16 @@
 #define ANT_H
 
 #include <vector>
+#include <random>
 #include "Graph.h"
 #include "PheromoneMatrix.h"
 #include "Tour.h"
 
 class Ant {
 public:
+    // Constants
+    static constexpr double EPSILON_DISTANCE = 1e-10;  // Minimum distance to avoid division by zero
+
     // Constructor
     Ant(int startCity, int numCities);
 
@@ -42,6 +46,9 @@ private:
     std::vector<int> tour_;
     double tourLength_;
     int numCities_;
+
+    // Shared random number generator for all ants
+    static std::mt19937& getRandomGenerator();
 };
 
 #endif // ANT_H

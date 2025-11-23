@@ -15,6 +15,8 @@ export interface SolveParams {
   q?: number
   use_convergence?: boolean
   convergence_iterations?: number
+  use_parallel?: boolean       // Enable multi-threading
+  num_threads?: number          // Number of threads (0=auto, 1=serial, 2+=specific)
 }
 
 export interface CityData {
@@ -171,6 +173,15 @@ export function useSocket(): UseSocketReturn {
     }
     addLog(`Params: α=${params.alpha}, β=${params.beta}, ρ=${params.rho}`)
 
+    // Log threading configuration
+    if (params.use_parallel === false || params.num_threads === 1) {
+      addLog(`Threading: Serial (single-threaded)`)
+    } else if (params.num_threads && params.num_threads > 1) {
+      addLog(`Threading: ${params.num_threads} threads`)
+    } else {
+      addLog(`Threading: Multi-threaded (auto-detect)`)
+    }
+
     // Backend expects { benchmark, params: { alpha, beta, rho, ... } }
     const payload = {
       benchmark: params.benchmark,
@@ -183,6 +194,8 @@ export function useSocket(): UseSocketReturn {
         Q: params.q,
         useConvergence: params.use_convergence,
         convergenceIterations: params.convergence_iterations,
+        useParallel: params.use_parallel,
+        numThreads: params.num_threads,
       },
     }
     console.log("Emitting solve event:", payload)

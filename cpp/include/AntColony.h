@@ -2,6 +2,7 @@
 #define ANTCOLONY_H
 
 #include <vector>
+#include <random>
 #include <functional>
 #include "Graph.h"
 #include "PheromoneMatrix.h"
@@ -42,6 +43,13 @@ public:
     // Set convergence threshold (default: 200 iterations without improvement)
     void setConvergenceThreshold(int threshold);
 
+    // Enable/disable parallel execution (default: true if OpenMP available)
+    void setUseParallel(bool useParallel);
+
+    // Set number of threads for parallel execution (0 = auto-detect, 1 = serial, 2+ = specific count)
+    // Only effective if OpenMP is available and useParallel is true
+    void setNumThreads(int numThreads);
+
     // Get best solution found
     const Tour& getBestTour() const { return bestTour_; }
 
@@ -70,6 +78,13 @@ private:
     ProgressCallback progressCallback_;  // Callback for progress updates
     int callbackInterval_ = 10;          // Invoke callback every N iterations
     int convergenceThreshold_ = 200;     // Iterations without improvement before stopping
+
+    // Threading control
+    bool useParallel_ = true;            // Enable parallel execution (if OpenMP available)
+    int numThreads_ = 0;                 // Number of threads (0 = auto, 1 = serial, 2+ = specific)
+
+    // Shared random number generator for colony
+    static std::mt19937& getRandomGenerator();
 };
 
 #endif // ANTCOLONY_H

@@ -71,6 +71,10 @@ class SolverManager:
         use_convergence = params.get('useConvergence', False)
         convergence_iterations = params.get('convergenceIterations', 200)
 
+        # Threading parameters
+        use_parallel = params.get('useParallel', Config.DEFAULT_PARAMS['useParallel'])
+        num_threads = params.get('numThreads', Config.DEFAULT_PARAMS['numThreads'])
+
         # Create colony
         colony = aco_solver.AntColony(
             self.graph,
@@ -80,6 +84,10 @@ class SolverManager:
             rho,
             Q
         )
+
+        # Configure threading
+        colony.setUseParallel(use_parallel)
+        colony.setNumThreads(num_threads)
 
         # Initialize
         colony.initialize()
