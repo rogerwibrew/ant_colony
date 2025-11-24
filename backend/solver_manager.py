@@ -55,11 +55,13 @@ class SolverManager:
         if self.graph is None or not self.graph.isValid():
             raise RuntimeError("No valid graph loaded")
 
+        num_cities = self.graph.getNumCities()
+
         # Extract parameters with defaults
         num_ants = params.get('numAnts')
         if num_ants is None:
             # Auto-calculate based on problem size (heuristic: 1-2 ants per city)
-            num_ants = max(10, min(100, self.graph.getNumCities()))
+            num_ants = max(10, min(100, num_cities))
 
         iterations = params.get('iterations', Config.DEFAULT_PARAMS['iterations'])
         alpha = params.get('alpha', Config.DEFAULT_PARAMS['alpha'])
@@ -75,10 +77,67 @@ class SolverManager:
         use_parallel = params.get('useParallel', Config.DEFAULT_PARAMS['useParallel'])
         num_threads = params.get('numThreads', Config.DEFAULT_PARAMS['numThreads'])
 
-        # Local search parameters
+        # Local search parameters - apply smart defaults based on problem size
         use_local_search = params.get('useLocalSearch', False)
-        use_3opt = params.get('use3Opt', True)
-        local_search_mode = params.get('localSearchMode', 'best')
+        use_3opt_param = params.get('use3Opt')
+        local_search_mode_param = params.get('localSearchMode')
+
+        # Smart defaults based on problem size
+        # Small problems (<100 cities): can afford 3-opt + all mode
+        # Medium problems (100-200 cities): use 3-opt + best mode
+        # Large problems (>200 cities): use 2-opt only + best mode
+        if use_local_search:
+            if local_search_mode_param is None:
+                # Auto-select mode based on problem size
+                if num_cities < 100:
+                    local_search_mode = 'best'  # Fast enough either way
+                elif num_cities < 200:
+                    local_search_mode = 'best'  # Only best tour for medium problems
+                else:
+                    local_search_mode = 'best'  # Only best tour for large problems
+            else:
+                local_search_mode = local_search_mode_param
+
+            if use_3opt_param is None:
+                # Auto-select 3-opt based on problem size and mode
+                if local_search_mode == 'all':
+                    # If user selected 'all' mode, disable 3-opt for problems >150 cities
+                    use_3opt = num_cities < 150
+                else:
+                    # For 'best' mode, can use 3-opt up to ~300 cities
+                    use_3opt = num_cities < 300
+            else:
+                use_3opt = use_3opt_param
+        else:
+            # Local search disabled
+            use_3opt = False
+            local_search_mode = 'none'
+
+        # Warn about expensive configurations
+        warnings = []
+        if use_local_search and local_search_mode == 'all' and use_3opt and num_cities > 150:
+            warnings.append(f"Warning: 'all tours' mode with 3-opt is very slow for {num_cities} cities. "
+                          f"Consider using 'best' mode or disabling 3-opt for faster results.")
+
+        if use_local_search and local_search_mode == 'all' and num_cities > 200:
+            warnings.append(f"Warning: 'all tours' mode is computationally expensive for {num_cities} cities. "
+                          f"Each iteration may take 5-10+ seconds. Consider using 'best' mode instead.")
+
+        # Log configuration info
+        print(f"Configuration for {num_cities} cities:")
+        print(f"  - Ants: {num_ants}")
+        print(f"  - Local search: {use_local_search}")
+        if use_local_search:
+            print(f"  - Mode: {local_search_mode}")
+            print(f"  - 3-opt: {use_3opt}")
+            if use_3opt_param is None or local_search_mode_param is None:
+                print(f"  - (Auto-adjusted for problem size)")
+
+        if warnings:
+            for warning in warnings:
+                print(warning)
+                # Emit warning to frontend
+                self.socketio.emit('warning', {'message': warning})
 
         # Elitist strategy parameters
         use_elitist = params.get('useElitist', False)

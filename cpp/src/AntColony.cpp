@@ -96,14 +96,20 @@ void AntColony::constructSolutions() {
         // Complete tour and store it
         if (ant.hasVisitedAll()) {
             Tour tour = ant.completeTour(graph_);
-
-            // Apply local search if enabled and mode is "all" (skip for trivial cases)
-            if (useLocalSearch_ && localSearchMode_ == "all" && graph_.getNumCities() > 3) {
-                LocalSearch::improve(tour, graph_, use3opt_);
-            }
-
-            // Store the (possibly improved) tour for pheromone updates
+            // Store the tour (local search will be applied later if mode is "all")
             antTours_[i] = tour;
+        }
+    }
+
+    // Apply local search to all tours in parallel if enabled and mode is "all"
+    if (useLocalSearch_ && localSearchMode_ == "all" && graph_.getNumCities() > 3) {
+        #ifdef _OPENMP
+        #pragma omp parallel for schedule(dynamic) if(useParallel_ && antTours_.size() >= 4)
+        #endif
+        for (size_t i = 0; i < antTours_.size(); ++i) {
+            if (!antTours_[i].getSequence().empty()) {
+                LocalSearch::improve(antTours_[i], graph_, use3opt_);
+            }
         }
     }
 }

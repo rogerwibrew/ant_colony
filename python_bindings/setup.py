@@ -25,11 +25,18 @@ cpp_sources = [
 
 # Compiler flags
 extra_compile_args = ['-O3']
+extra_link_args = []
+
 if sys.platform == 'darwin':  # macOS
     extra_compile_args.append('-std=c++17')
     extra_compile_args.append('-stdlib=libc++')
+    extra_compile_args.append('-Xpreprocessor')
+    extra_compile_args.append('-fopenmp')
+    extra_link_args.append('-lomp')
 elif sys.platform == 'linux':  # Linux
     extra_compile_args.append('-std=c++17')
+    extra_compile_args.append('-fopenmp')
+    extra_link_args.append('-fopenmp')
 
 # Define the extension module
 ext_modules = [
@@ -39,6 +46,7 @@ ext_modules = [
         include_dirs=['../cpp/include'],
         cxx_std=17,
         extra_compile_args=extra_compile_args,
+        extra_link_args=extra_link_args,
         define_macros=[('VERSION_INFO', '1.0.0')],
     ),
 ]
